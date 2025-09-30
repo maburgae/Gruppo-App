@@ -34,6 +34,7 @@ def render(st):
     if st.button("Neue Runde"):
         try:
             players = json.loads(st.session_state.konf_players)
+            #print(players)
             if not isinstance(players, list):
                 raise ValueError("Spieler muss eine JSON-Liste sein.")
         except Exception as e:
@@ -57,8 +58,6 @@ def render(st):
         print("uploaded file is not none")
 
     # Editierbare Tabelle für Par, Hcp und Scores aller Spieler
-    import pandas as pd
-    import json
     with open("json/golf_df/golf_df.json", "r", encoding="utf-8") as f:
         golf_data = json.load(f)
     key = list(golf_data.keys())[0]
