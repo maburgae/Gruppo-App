@@ -89,8 +89,8 @@ def render(st):
                 return int(val)
             except (ValueError, TypeError):
                 return None
-        new_par = [nan_to_null_int(x) for x in list(edited_df.iloc[0, 1:19])]
-        new_hcp = [nan_to_null_int(x) for x in list(edited_df.iloc[1, 1:19])]
+        new_par = [nan_to_null_int(edited_df.iloc[0, i]) for i in range(1, 19)]
+        new_hcp = [nan_to_null_int(edited_df.iloc[1, i]) for i in range(1, 19)]
         new_scores = {}
         new_ld = {}
         new_n2tp = {}
