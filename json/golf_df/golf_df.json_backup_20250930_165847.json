@@ -52,9 +52,9 @@
         "Bogies": null,
         "Strich": null,
         "DayHcp": null,
-        "Ladies": 2,
+        "Ladies": null,
         "N2TP": null,
-        "LD": 1,
+        "LD": null,
         "Score": [
           0,
           2,
@@ -107,7 +107,7 @@
         "Strich": null,
         "DayHcp": null,
         "Ladies": null,
-        "N2TP": 1,
+        "N2TP": null,
         "LD": null,
         "Score": [
           null,
@@ -160,7 +160,7 @@
         "Bogies": null,
         "Strich": null,
         "DayHcp": null,
-        "Ladies": 2,
+        "Ladies": null,
         "N2TP": null,
         "LD": null,
         "Score": [
@@ -214,7 +214,7 @@
         "Bogies": null,
         "Strich": null,
         "DayHcp": null,
-        "Ladies": 3,
+        "Ladies": null,
         "N2TP": null,
         "LD": null,
         "Score": [

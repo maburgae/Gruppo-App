@@ -44,7 +44,7 @@ def render(st):
             st.session_state.konf_output = result
 
     # Eingabefeld "Spieler"
-    st.text_input("Spieler (JSON-Liste)", value=st.session_state.konf_players, key="konf_players")
+    st.text_input("Spieler (JSON-Liste)", key="konf_players")
 
     # Knopf "Upload Scorecard" mit Dateiupload
     uploaded_file = st.file_uploader("Scorecard Datei auswählen", type=["jpg", "jpeg", "png"])
@@ -98,11 +98,11 @@ def render(st):
         # Only process score rows (skip Par/Hcp)
         for idx in range(2, edited_df.shape[0]):
             row = edited_df.iloc[idx]
-            player = row[0].replace("Score ", "")
-            scores = [nan_to_null_int(x) for x in list(row[1:19])]
-            ld = nan_to_null_int(row[19])
-            n2tp = nan_to_null_int(row[20])
-            ladies = nan_to_null_int(row[21])
+            player = row.iloc[0].replace("Score ", "")
+            scores = [nan_to_null_int(row.iloc[i]) for i in range(1, 19)]
+            ld = nan_to_null_int(row.iloc[19])
+            n2tp = nan_to_null_int(row.iloc[20])
+            ladies = nan_to_null_int(row.iloc[21])
             new_scores[player] = scores
             new_ld[player] = ld
             new_n2tp[player] = n2tp
@@ -133,10 +133,10 @@ def render(st):
 
     # Show a picture only if the file exists
     if os.path.exists("pics/scorecard.png"):
-        st.image("pics/scorecard.png", caption="Scorecard", use_column_width=True)
+        st.image("pics/scorecard.png", caption="Scorecard", width='stretch')
 
     if os.path.exists("pics/ranking.png"):
-        st.image("pics/ranking.png", caption="Ranking", use_column_width=True)
+        st.image("pics/ranking.png", caption="Ranking", width='stretch')
 
 
     # Knopf: "Tag -> Alle Runden"
