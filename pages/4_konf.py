@@ -28,6 +28,23 @@ def _init_state():
 def render(st):
     _init_state()
 
+    # Simple password protection for this page
+    if "konf_authed" not in st.session_state:
+        st.session_state.konf_authed = False
+    if not st.session_state.konf_authed:
+        with st.form("konf_auth_form"):
+            pwd = st.text_input("Passwort", type="password")
+            ok = st.form_submit_button("Login")
+        if ok:
+            if pwd == "9":
+                st.session_state.konf_authed = True
+                st.success("Eingeloggt.")
+            else:
+                st.error("Falsches Passwort.")
+                st.stop()
+        else:
+            st.stop()
+
     st.header("Konfiguration")
 
     # Knopf "Neue Runde"
@@ -76,7 +93,7 @@ def render(st):
         pdata = data["Spieler"][player]
         edit_rows[score_row_idx] += [pdata.get("LD", None), pdata.get("N2TP", None), pdata.get("Ladies", None)]
     edit_df = pd.DataFrame(edit_rows, columns=columns)
-    st.subheader("golf_df (Par, Hcp, Scores, LD, N2TP, Ladies)")
+    st.subheader("Scorecard Tabelle")
     st.session_state.golf_df = st.data_editor(edit_df, key="golf_df_editor_full", width='stretch', column_config={col: {"width": "small"} for col in edit_df.columns})
 
     # Knopf zum Speichern der Tabelle ins JSON
@@ -152,3 +169,7 @@ def render(st):
     # Ausgabefeld "Output"
     st.subheader("Output")
     st.text_area("Ausgabe", value=st.session_state.konf_output, key="konf_output_area", height=120)
+
+if __name__ == "__main__":
+    import streamlit as st
+    render(st)

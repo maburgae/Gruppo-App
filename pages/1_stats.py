@@ -1,4 +1,12 @@
 def render(st):
+    # --- Yearly Average Hcp Plot ---
+    import streamlit as st
+    import plot_Hcp
+    #st.subheader("Jährliches Durschnitts Hcp")
+    json_file = "json/allrounds.json"
+    players = ["Marc", "Heiko", "Andy", "Buffy", "Bernie", "Markus", "Jens"]
+    plot_Hcp.plot_yearly_avg_hcp(json_file, players, save_path=None, show=True)
+
     import json
     import matplotlib.pyplot as plt
     from collections import defaultdict
@@ -195,3 +203,7 @@ def render(st):
             f"{strich_avgs[player]:.2f}"
         ])
     display_table(["Spieler", "Birdies/Runde", "Pars/Runde", "Bogies/Runde", "Strich/Runde"], combined_rows, "Durchschnittswerte pro Runde")
+
+if __name__ == "__main__":
+    import streamlit as st
+    render(st)
