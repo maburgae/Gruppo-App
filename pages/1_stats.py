@@ -75,7 +75,7 @@ def render(st):
                 avg_vals.append("-")
         row_labels.append("Average")
         table_data.append(avg_vals)
-        fig, ax = plt.subplots(figsize=(len(players) * 1.5, 6))
+        fig, ax = plt.subplots(figsize=(len(players) * 1.7, 9.0))
         ax.axis("off")
         table = ax.table(
             cellText=table_data,
@@ -85,9 +85,9 @@ def render(st):
             cellLoc="center"
         )
         table.auto_set_font_size(False)
-        table.set_fontsize(10)
-        table.scale(0.9, 2.0)
-        plt.title("GruppoHcp – Letzte 6 Runden", fontsize=12, pad=20)
+        table.set_fontsize(20)
+        table.scale(1.2, 4.0)
+        plt.title("GruppoHcp – Letzte 6 Runden", fontsize=20, pad=28)
         st.pyplot(fig)
         plt.close(fig)
 
@@ -103,14 +103,14 @@ def render(st):
     selected_players = ["Andy", "Marc", "Bernie", "Heiko", "Markus", "Buffy", "Jens"]
 
     def display_table(headers, rows, title=None):
-        fig, ax = plt.subplots(figsize=(12, 0.6 + 0.4 * len(rows)))
+        fig, ax = plt.subplots(figsize=(13.0, 0.6 + 0.6 * len(rows)))
         ax.axis('off')
         table = ax.table(cellText=[headers] + rows, loc='center', cellLoc='center')
         table.auto_set_font_size(False)
-        table.set_fontsize(10)
-        table.scale(1, 1.2)
+        table.set_fontsize(20)
+        table.scale(1.3, 2.1)
         if title:
-            plt.title(title, fontsize=14)
+            plt.title(title, fontsize=20)
         st.pyplot(fig)
         plt.close(fig)
 
