@@ -1,7 +1,7 @@
 import streamlit as st
 import importlib
 
-st.set_page_config(page_title="Gruppo App", page_icon="⛳", layout="wide")
+st.set_page_config(page_title="Gruppo App", page_icon="⛳", layout="wide", menu_items={})
 
 # --- Menü als Buttons oben (smartphonefreundlich) ---
 MENU_PAGES = ["Runden", "Stats", "2025", "Konf"]
@@ -13,26 +13,24 @@ MENU_MODULES = {
 }
 
 col1, col2, col3, col4 = st.columns(4)
+menu_clicked = None
 with col1:
-    btn_runden = st.button("Runden")
+    if st.button("Runden"):
+        menu_clicked = "Runden"
 with col2:
-    btn_stats = st.button("Stats")
+    if st.button("Stats"):
+        menu_clicked = "Stats"
 with col3:
-    btn_2025 = st.button("2025")
+    if st.button("2025"):
+        menu_clicked = "2025"
 with col4:
-    btn_konf = st.button("Konf")
+    if st.button("Konf"):
+        menu_clicked = "Konf"
 
-if "menu" not in st.session_state:
+if menu_clicked:
+    st.session_state["menu"] = menu_clicked
+elif "menu" not in st.session_state:
     st.session_state["menu"] = "Runden"
-
-if btn_runden:
-    st.session_state["menu"] = "Runden"
-if btn_stats:
-    st.session_state["menu"] = "Stats"
-if btn_2025:
-    st.session_state["menu"] = "2025"
-if btn_konf:
-    st.session_state["menu"] = "Konf"
 
 menu = st.session_state["menu"]
 

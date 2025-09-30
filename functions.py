@@ -1,9 +1,22 @@
+import os
 from openai import OpenAI
 import json
 import pandas as pd
 from datetime import date, datetime
 import shutil
 from datetime import datetime
+
+# Helper to get OpenAI client with API key from env or Streamlit secrets
+def get_openai_client():
+    api_key = os.environ.get("OPENAI_API_KEY")
+    if api_key:
+        return OpenAI(api_key=api_key)
+    try:
+        import streamlit as st
+        api_key = st.secrets["OPENAI_API_KEY"]
+        return OpenAI(api_key=api_key)
+    except Exception:
+        return OpenAI()  # fallback, may fail if no key
 
 def upload_image_for_vision(image_path: str) -> str:
     """
@@ -13,7 +26,7 @@ def upload_image_for_vision(image_path: str) -> str:
     Returns:
         str: The image id assigned by OpenAI.
     """
-    client = OpenAI()
+    client = get_openai_client()
     with open(image_path, "rb") as file_content:
         image = client.files.create(
             file=file_content,
@@ -37,7 +50,7 @@ def query_vision_model(image_id: str, json_file: str, gpt_model: str, prompt: st
     Returns:
         bool: True if the response is valid JSON and was saved, False otherwise.
     """
-    client = OpenAI()
+    client = get_openai_client()
     response = client.responses.create(
         model=gpt_model,
         input=[{

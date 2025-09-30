@@ -11,8 +11,7 @@ def main(image_path: str | None = None) -> str:
     
     #######################################################
     # Disabled to run without AI query
-    # image_id = up
-    # load_image_for_vision(image_path)
+    image_id = upload_image_for_vision(image_path)
     #######################################################
     
     # Set model type
@@ -47,9 +46,9 @@ def main(image_path: str | None = None) -> str:
 
     #######################################
     ## code to run without ai query
-    scorecard_path = f"json/golf_df/ai_result_29.09.2025 23_19_18.json"
-    # success = query_vision_model(image_id, scorecard_path, gpt_model , prompt)
-    success = True
+    #scorecard_path = f"json/golf_df/ai_result_29.09.2025 23_19_18.json"
+    success = query_vision_model(image_id, scorecard_path, gpt_model , prompt)
+    #success = True
     copy_scorecard_to_golf_df(scorecard_path, day_path)
     #######################################
     
