@@ -57,7 +57,7 @@ def render(st):
         years = sorted(per_year_vals.keys())
         means = [sum(per_year_vals[y]) / len(per_year_vals[y]) for y in years]
         if years:
-            text15("Jährlicher Mittelwert Gesp.Hcp (ausgewählte Spieler)")
+            text15("Jährlicher Mittelwert Gesp.Hcp aller Spieler")
             fig, ax = plt.subplots(figsize=(10, 6))
             # Styling similar to Verlauf Hcp
             LABEL_FS = 16
@@ -459,11 +459,12 @@ def render(st):
             autopct=fmt_euro,
             startangle=90,
             counterclock=False,
-            wedgeprops=dict(linewidth=1, edgecolor='white')
+            wedgeprops=dict(linewidth=1, edgecolor='white'),
+            textprops=dict(fontsize=15)  # Ensure all pie texts (labels + autopct) are 15
         )
         # Add total sum in the center of the pie
         total_label = f"Gesamt\n€{int(round(total_geld))}"
-        ax.text(0, 0, total_label, ha='center', va='center', fontsize=18, fontweight='bold')
+        ax.text(0, 0, total_label, ha='center', va='center', fontsize=15, fontweight='bold')
         ax.axis('equal')
         fig.tight_layout()
         st.pyplot(fig)

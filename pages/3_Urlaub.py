@@ -249,10 +249,11 @@ def render(st):
             autopct=fmt_euro,
             startangle=90,
             counterclock=False,
-            wedgeprops=dict(linewidth=1, edgecolor='white')
+            wedgeprops=dict(linewidth=1, edgecolor='white'),
+            textprops=dict(fontsize=15)  # set label and autopct font sizes to 15
         )
         # total in center
-        ax.text(0, 0, f"Gesamt\n€{int(round(total_geld))}", ha='center', va='center', fontsize=18, fontweight='bold')
+        ax.text(0, 0, f"Gesamt\n€{int(round(total_geld))}", ha='center', va='center', fontsize=15, fontweight='bold')
         ax.axis('equal')
         fig.tight_layout()
         st.pyplot(fig)
