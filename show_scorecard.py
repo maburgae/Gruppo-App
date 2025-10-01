@@ -68,14 +68,27 @@ def show_scorecard(json_file: str, date_key: str, save_path=None, show=True):
     fig, ax = plt.subplots(figsize=(14, 7))
     ax.axis("off")
 
-    # Reduce space above and below the table
-    plt.subplots_adjust(top=0.85, bottom=0.15)
+    # Remove extra whitespace around the table
+    # Fill the entire figure with the axes and eliminate padding
+    try:
+        fig.tight_layout(pad=0)
+    except Exception:
+        pass
+    fig.subplots_adjust(left=0, right=1, top=1, bottom=0)
+    ax.set_position([0, 0, 1, 1])
 
     table = ax.table(cellText=cell_data, cellLoc="center", loc="center")
 
     table.auto_set_font_size(False)
-    table.set_fontsize(10)
+    table.set_fontsize(14)
     table.scale(1.0, 1.5)
+
+    # Reduce internal cell padding to the minimum so there's no extra space
+    for cell in table.get_celld().values():
+        try:
+            cell.set_pad(0.01)
+        except Exception:
+            pass
 
     # Make the first column wider
     for key, cell in table.get_celld().items():
@@ -140,8 +153,8 @@ def show_scorecard(json_file: str, date_key: str, save_path=None, show=True):
                 else:
                     text.set_color("black")
 
-    plt.title(f"Scorecard – {date_key}", fontsize=14, pad=10)  # Reduce pad for less space above table
-
+    # plt.title(f"Scorecard – {date_key}", fontsize=14, pad=10)  # Reduce pad for less space above table
+    """
     # Add legend
     legend_elements = [
         Patch(facecolor="violet", label="Birdie"),
@@ -152,9 +165,13 @@ def show_scorecard(json_file: str, date_key: str, save_path=None, show=True):
     ]
     ax.legend(handles=legend_elements, loc="upper center", bbox_to_anchor=(0.5, -0.13),
               ncol=3, frameon=False)  # Move legend closer to table
-
+    """
     if save_path:
-        plt.savefig(save_path, dpi=100, bbox_inches="tight")
+        # Draw first so we can compute the exact table bounding box and crop with zero margins
+        fig.canvas.draw()
+        bbox = table.get_window_extent(renderer=fig.canvas.get_renderer())
+        bbox_inches = bbox.transformed(fig.dpi_scale_trans.inverted())
+        fig.savefig(save_path, dpi=100, bbox_inches=bbox_inches, pad_inches=0)
         print(f"[ok] Saved to {save_path}")
     if show:
         plt.show()
@@ -163,7 +180,7 @@ def show_scorecard(json_file: str, date_key: str, save_path=None, show=True):
 
 def main():
     json_file = "json/allrounds.json"
-    date_key = "07.09.2002"  # Schlüssel wie in deiner JSON
+    date_key = "07.10.2024"  # Schlüssel wie in deiner JSON
     show_scorecard(json_file, date_key, save_path="scorecard.png", show=True)
 
 

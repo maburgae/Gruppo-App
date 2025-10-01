@@ -26,6 +26,30 @@ def _init_state():
         })
 
 def render(st):
+    # Global CSS for 15px font across common text elements and labels/buttons
+    st.markdown(
+        """
+        <style>
+        html, body, p, ol, ul, dl, span, div,
+        [data-testid='stMarkdownContainer'] p,
+        [data-testid='stMarkdownContainer'] span,
+        h1, h2, h3, h4, h5, h6,
+        [data-testid='stHeader'] h1,
+        label,
+        .stButton > button,
+        .stDownloadButton > button,
+        .stTextInput label,
+        .stSelectbox label,
+        .stFileUploader label {
+            font-size: 15px !important;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+    def text15(s: str):
+        st.markdown(f"<span style='font-size:15px'>{s}</span>", unsafe_allow_html=True)
+
     _init_state()
 
     # Simple password protection for this page
@@ -45,7 +69,7 @@ def render(st):
         else:
             st.stop()
 
-    st.header("Konfiguration")
+    text15("Konfiguration")
 
     # Knopf "Neue Runde"
     if st.button("Neue Runde"):
@@ -61,7 +85,12 @@ def render(st):
             st.session_state.konf_output = result
 
     # Eingabefeld "Spieler"
-    st.text_input("Spieler (JSON-Liste)", key="konf_players")
+    # Prefill explicitly with session value or default
+    st.text_input(
+        "Spieler (JSON-Liste)",
+        value=st.session_state.get("konf_players", DEFAULT_PLAYERS_STR),
+        key="konf_players",
+    )
 
     # Knopf "Upload Scorecard" mit Dateiupload
     uploaded_file = st.file_uploader("Scorecard Datei auswählen", type=["jpg", "jpeg", "png"])
@@ -93,7 +122,7 @@ def render(st):
         pdata = data["Spieler"][player]
         edit_rows[score_row_idx] += [pdata.get("LD", None), pdata.get("N2TP", None), pdata.get("Ladies", None)]
     edit_df = pd.DataFrame(edit_rows, columns=columns)
-    st.subheader("Scorecard Tabelle")
+    text15("Scorecard Tabelle")
     st.session_state.golf_df = st.data_editor(edit_df, key="golf_df_editor_full", width='stretch', column_config={col: {"width": "small"} for col in edit_df.columns})
 
     # Knopf zum Speichern der Tabelle ins JSON
@@ -166,8 +195,59 @@ def render(st):
         result = erzeuge_stats_main()
         st.session_state.konf_output = result
 
+    # Download allrounds.json
+    try:
+        with open("json/allrounds.json", "r", encoding="utf-8") as f:
+            _allrounds = f.read()
+        st.download_button(
+            label="Download allrounds.json",
+            data=_allrounds,
+            file_name="allrounds.json",
+            mime="application/json",
+            key="download_allrounds_json",
+        )
+    except Exception:
+        pass
+
+    # Neuer Knopf: Schlüssel aus golf_df nach allrounds.json übernehmen
+    if st.button("Key aus Tag in allrounds.json übernehmen"):
+        try:
+            # Quelle lesen (aktueller Tag)
+            with open("json/golf_df/golf_df.json", "r", encoding="utf-8") as f:
+                tag_data = json.load(f)
+            if not isinstance(tag_data, dict) or len(tag_data) == 0:
+                raise ValueError("golf_df.json enthält keinen gültigen Schlüssel")
+            date_key = next(iter(tag_data.keys()))
+            round_obj = tag_data[date_key]
+
+            # Ziel lesen (alle Runden)
+            allrounds_path = "json/allrounds.json"
+            if os.path.exists(allrounds_path):
+                with open(allrounds_path, "r", encoding="utf-8") as f:
+                    allrounds = json.load(f)
+                if not isinstance(allrounds, dict):
+                    allrounds = {}
+            else:
+                allrounds = {}
+
+            # Backup anlegen, falls vorhanden
+            if os.path.exists(allrounds_path):
+                import shutil
+                from datetime import datetime as _dt
+                ts = _dt.now().strftime("%Y%m%d_%H%M%S")
+                backup_path = f"json/allrounds_backup_{ts}.json"
+                shutil.copy2(allrounds_path, backup_path)
+
+            # Einfügen/Überschreiben
+            allrounds[date_key] = round_obj
+            with open(allrounds_path, "w", encoding="utf-8") as f:
+                json.dump(allrounds, f, ensure_ascii=False, indent=2)
+            st.success(f"Datum {date_key} in allrounds.json eingefügt/aktualisiert.")
+        except Exception as e:
+            st.error(f"Fehler: {e}")
+
     # Ausgabefeld "Output"
-    st.subheader("Output")
+    text15("Output")
     st.text_area("Ausgabe", value=st.session_state.konf_output, key="konf_output_area", height=120)
 
 if __name__ == "__main__":

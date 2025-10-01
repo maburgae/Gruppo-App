@@ -2,8 +2,29 @@ def render(st):
     # --- Yearly Average Hcp Plot ---
     import streamlit as st
     import plot_Hcp
+
+    # Global CSS to clamp typical text elements to 15px
+    st.markdown(
+        """
+        <style>
+        html, body, p, ol, ul, dl, span, div,
+        [data-testid="stMarkdownContainer"] p,
+        [data-testid="stMarkdownContainer"] span,
+        h1, h2, h3, h4, h5, h6,
+        [data-testid="stHeader"] h1 {
+          font-size: 15px !important;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    # Helper for 15px text outputs
+    def text15(s: str):
+        st.markdown(f"<span style='font-size:15px'>{s}</span>", unsafe_allow_html=True)
+
     # Heading above the yearly average chart
-    st.text("Jährliches Durchschnitts-Hcp pro Spieler")
+    text15("Jährliches Durchschnitts-Hcp pro Spieler")
     json_file = "json/allrounds.json"
     players = ["Marc", "Heiko", "Andy", "Buffy", "Bernie", "Markus", "Jens"]
     plot_Hcp.plot_yearly_avg_hcp(json_file, players, save_path=None, show=True)
@@ -13,6 +34,55 @@ def render(st):
     from collections import defaultdict
     from datetime import datetime
     import math
+
+    # --- Jährlicher Mittelwert aller Gesp.Hcp (alle Spieler) ---
+    try:
+        with open(json_file, "r", encoding="utf-8") as f:
+            all_data = json.load(f)
+        per_year_vals = defaultdict(list)
+        # consider only these players for the yearly mean
+        mean_players = ["Marc", "Heiko", "Andy", "Buffy", "Bernie", "Markus"]
+        for date_str, round_obj in all_data.items():
+            try:
+                year = datetime.strptime(date_str, "%d.%m.%Y").year
+            except ValueError:
+                continue
+            spieler = round_obj.get("Spieler", {})
+            for name, pdata in spieler.items():
+                if name not in mean_players:
+                    continue
+                h = pdata.get("Gesp.Hcp")
+                if isinstance(h, (int, float)) and not (isinstance(h, float) and math.isnan(h)):
+                    per_year_vals[year].append(float(h))
+        years = sorted(per_year_vals.keys())
+        means = [sum(per_year_vals[y]) / len(per_year_vals[y]) for y in years]
+        if years:
+            text15("Jährlicher Mittelwert Gesp.Hcp (ausgewählte Spieler)")
+            fig, ax = plt.subplots(figsize=(10, 6))
+            # Styling similar to Verlauf Hcp
+            LABEL_FS = 16
+            TICK_FS = 14
+            LEGEND_FS = 14
+            ax.plot(years, means, marker="o", linestyle="-", label="Mittelwert")
+            # Trendlinie (linear)
+            try:
+                import numpy as np
+                if len(years) >= 2:
+                    coef = np.polyfit(years, means, 1)
+                    trend = np.polyval(coef, years)
+                    ax.plot(years, trend, linestyle="--", color="tab:red", linewidth=2, label="Trend")
+            except Exception:
+                pass
+            ax.set_xlabel("Year", fontsize=LABEL_FS)
+            ax.set_ylabel("Average Gesp.Hcp", fontsize=LABEL_FS)
+            ax.tick_params(axis='both', labelsize=TICK_FS)
+            ax.grid(True)
+            ax.legend(fontsize=LEGEND_FS)
+            fig.tight_layout()
+            st.pyplot(fig)
+            plt.close(fig)
+    except Exception:
+        pass
 
     # --- GruppoHcp Table ---
     def load_data(json_file: str):
@@ -112,7 +182,7 @@ def render(st):
         except Exception:
             pass
         # Streamlit text heading above the table (no matplotlib title)
-        st.text("GruppoHcp – Letzte 6 Runden")
+        text15("GruppoHcp – Letzte 6 Runden")
         st.pyplot(fig)
         plt.close(fig)
 
@@ -150,7 +220,7 @@ def render(st):
                 pass
         if title:
             # Render heading via Streamlit instead of matplotlib title
-            st.text(title)
+            text15(title)
         st.pyplot(fig)
         plt.close(fig)
 
@@ -240,6 +310,164 @@ def render(st):
             f"{strich_avgs[player]:.2f}"
         ])
     display_table(["Spieler", "Birdies/R", "Pars/R", "Bogies/R", "Strich/R"], combined_rows, "Durchschnittswerte pro Runde")
+
+    # --- Sonderwertungen: LD, N2TP, Ladies Übersicht ---
+    def is_present(v):
+        # consider values present if not None/empty and not zero for counting events
+        if v is None:
+            return False
+        if isinstance(v, (int, float)):
+            try:
+                import math as _m
+                if isinstance(v, float) and _m.isnan(v):
+                    return False
+            except Exception:
+                pass
+            return v != 0
+        if isinstance(v, str):
+            return v.strip() != ""
+        return True
+
+    # helper: value is defined if not None and not NaN (zero counts as defined)
+    def has_defined_number(v):
+        return (v is not None) and not (isinstance(v, float) and math.isnan(v))
+
+    # helper: convert a metric value to numeric points
+    def to_points(v) -> float:
+        if v is None:
+            return 0.0
+        if isinstance(v, bool):
+            return 1.0 if v else 0.0
+        if isinstance(v, (int, float)):
+            if isinstance(v, float) and math.isnan(v):
+                return 0.0
+            return float(v)
+        if isinstance(v, str):
+            return 1.0 if v.strip() != "" else 0.0
+        return 0.0
+
+    # Collect rounds where any player has LD/N2TP/Ladies present (optional filter; zero contributes nothing)
+    ld_round_keys, n2tp_round_keys, ladies_round_keys = [], [], []
+    for date_key, round_obj in data.items():
+        sp = round_obj.get("Spieler", {})
+        if any(is_present(sp.get(p, {}).get("LD")) for p in sp.keys()):
+            ld_round_keys.append(date_key)
+        if any(is_present(sp.get(p, {}).get("N2TP")) for p in sp.keys()):
+            n2tp_round_keys.append(date_key)
+        if any(has_defined_number(sp.get(p, {}).get("Ladies")) for p in sp.keys()):
+            ladies_round_keys.append(date_key)
+
+    # Aggregate points per player
+    ld_points = {p: 0.0 for p in selected_players}
+    n2tp_points = {p: 0.0 for p in selected_players}
+    # Ladies aggregation based on played rounds (Score is a non-empty array)
+    ladies_sums = {p: 0.0 for p in selected_players}
+    ladies_rounds_played = {p: 0 for p in selected_players}
+
+    # LD points
+    for dk in ld_round_keys:
+        sp = data[dk].get("Spieler", {})
+        for p in selected_players:
+            ld_points[p] += to_points(sp.get(p, {}).get("LD"))
+
+    # N2TP points
+    for dk in n2tp_round_keys:
+        sp = data[dk].get("Spieler", {})
+        for p in selected_players:
+            n2tp_points[p] += to_points(sp.get(p, {}).get("N2TP"))
+
+    # Ladies: per player, count played rounds (Score non-empty list) and sum Ladies over those rounds
+    for date_key, round_obj in data.items():
+        sp = round_obj.get("Spieler", {})
+        for p in selected_players:
+            pdata = sp.get(p, {})
+            score = pdata.get("Score")
+            played = isinstance(score, list) and len(score) > 0
+            if played:
+                ladies_rounds_played[p] += 1
+                v = pdata.get("Ladies")
+                if isinstance(v, (int, float)) and not (isinstance(v, float) and math.isnan(v)):
+                    ladies_sums[p] += float(v)
+
+    # Totals over the selected players so LD% + N2TP% sum to 100%
+    total_ld_points = sum(ld_points.values()) or 1.0
+    total_n2tp_points = sum(n2tp_points.values()) or 1.0
+
+    specials_rows = []
+    for p in selected_players:
+        ld_pct = 100.0 * ld_points[p] / total_ld_points
+        n2tp_pct = 100.0 * n2tp_points[p] / total_n2tp_points
+        ladies_pr = (ladies_sums[p] / ladies_rounds_played[p]) if ladies_rounds_played[p] else 0.0
+        specials_rows.append([
+            p,
+            f"{ld_pct:.1f}%",
+            f"{n2tp_pct:.1f}%",
+            f"{ladies_pr:.2f}",
+            f"{int(ladies_sums[p])}"
+        ])
+
+    display_table(["Spieler", "LD %", "N2TP %", "Ladies/R", "L Ges."], specials_rows, "Sonderwertungen Übersicht")
+
+    # --- Kuchendiagramm: Geld-Verteilung ---
+    # Sum Geld per selected player
+    geld_sums = {p: 0.0 for p in selected_players}
+    for round_obj in data.values():
+        sp = round_obj.get("Spieler", {})
+        for p in selected_players:
+            v = sp.get(p, {}).get("Geld")
+            if isinstance(v, (int, float)) and not (isinstance(v, float) and math.isnan(v)):
+                geld_sums[p] += float(v)
+
+    # Filter players with > 0 geld to avoid zero-slices
+    labels = []
+    sizes = []
+    # Build color mapping to match Verlauf Hcp colors (matplotlib default cycle order by initial players list)
+    try:
+        cycle_colors = plt.rcParams['axes.prop_cycle'].by_key().get('color', [])
+    except Exception:
+        cycle_colors = []
+    base_players_order = ["Marc", "Heiko", "Andy", "Buffy", "Bernie", "Markus", "Jens"]
+    color_map = {}
+    for idx, name in enumerate(base_players_order):
+        if idx < len(cycle_colors):
+            color_map[name] = cycle_colors[idx]
+    colors = []
+
+    total_geld = sum(geld_sums.values())
+    if total_geld <= 0:
+        text15("Geld-Verteilung (Summe)")
+        st.info("Keine Geld-Daten vorhanden.")
+    else:
+        for p in selected_players:
+            val = geld_sums[p]
+            if val > 0:
+                labels.append(p)
+                sizes.append(val)
+                colors.append(color_map.get(p))
+        # Ensure colors list populated (fallback)
+        if not any(colors):
+            colors = None
+        text15("Monetenkuchen Alltime")
+        fig, ax = plt.subplots(figsize=(8, 8))
+        def fmt_euro(pct):
+            abs_val = pct * sum(sizes) / 100.0
+            return f"€{int(round(abs_val))}"
+        wedges, texts, autotexts = ax.pie(
+            sizes,
+            labels=labels,
+            colors=colors,
+            autopct=fmt_euro,
+            startangle=90,
+            counterclock=False,
+            wedgeprops=dict(linewidth=1, edgecolor='white')
+        )
+        # Add total sum in the center of the pie
+        total_label = f"Gesamt\n€{int(round(total_geld))}"
+        ax.text(0, 0, total_label, ha='center', va='center', fontsize=18, fontweight='bold')
+        ax.axis('equal')
+        fig.tight_layout()
+        st.pyplot(fig)
+        plt.close(fig)
 
 if __name__ == "__main__":
     import streamlit as st

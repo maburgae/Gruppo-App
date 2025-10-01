@@ -5,8 +5,26 @@ from datetime import datetime
 import json
 
 def render(st):
+    # Global CSS for 15px text
+    st.markdown(
+        """
+        <style>
+        html, body, p, ol, ul, dl, span, div,
+        [data-testid='stMarkdownContainer'] p,
+        [data-testid='stMarkdownContainer'] span,
+        h1, h2, h3, h4, h5, h6,
+        [data-testid='stHeader'] h1 {
+            font-size: 15px !important;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+    def text15(s: str):
+        st.markdown(f"<span style='font-size:15px'>{s}</span>", unsafe_allow_html=True)
+
     # Streamlit app starts here
-    st.title("All time rankings:")
+    text15("Runden")
 
     # Directory selection
     directory1 = "rankings/"
@@ -31,7 +49,7 @@ def render(st):
         images = sorted(image_files, key=lambda d: datetime.strptime(os.path.splitext(d)[0], "%d.%m.%Y"), reverse=True)
 
         if len(images) == 0:
-            st.write("No images found in the directory.")
+            text15("No images found in the directory.")
         else:
             # Display each image with its name
             for image_file in images:
@@ -43,7 +61,7 @@ def render(st):
                     display_name = f"{file_name} ({ort})"
                 else:
                     display_name = file_name
-                st.write(f"**{display_name}**")  # Display file name
+                st.markdown(f"<b style='font-size:15px'>{display_name}</b>", unsafe_allow_html=True)
                 # Open and display the image
                 image_path = os.path.join(directory1, image_file)
                 image = Image.open(image_path)
