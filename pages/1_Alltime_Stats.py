@@ -38,11 +38,11 @@ def render(st):
         means = [sum(per_year_vals[y]) / len(per_year_vals[y]) for y in years]
         if years:
             st.text("Jährlicher Mittelwert Gesp.Hcp aller Spieler")
-            fig, ax = plt.subplots(figsize=(15, 6))
+            fig, ax = plt.subplots(figsize=(10, 6))
             # Styling similar to Verlauf Hcp
-            LABEL_FS = 16
-            TICK_FS = 14
-            LEGEND_FS = 14
+            LABEL_FS = 15
+            TICK_FS = 15
+            LEGEND_FS = 15
             ax.plot(years, means, marker="o", linestyle="-", label="Mittelwert")
             # Trendlinie (linear)
             try:
