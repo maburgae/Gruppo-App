@@ -3,28 +3,8 @@ def render(st):
     import streamlit as st
     import plot_Hcp
 
-    # Global CSS to clamp typical text elements to 15px
-    st.markdown(
-        """
-        <style>
-        html, body, p, ol, ul, dl, span, div,
-        [data-testid="stMarkdownContainer"] p,
-        [data-testid="stMarkdownContainer"] span,
-        h1, h2, h3, h4, h5, h6,
-        [data-testid="stHeader"] h1 {
-          font-size: 15px !important;
-        }
-        </style>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    # Helper for 15px text outputs
-    def text15(s: str):
-        st.markdown(f"<span style='font-size:15px'>{s}</span>", unsafe_allow_html=True)
-
     # Heading above the yearly average chart
-    text15("Jährliches Durchschnitts-Hcp pro Spieler")
+    st.text("Jährliches Durchschnitts-Hcp pro Spieler")
     json_file = "json/allrounds.json"
     players = ["Marc", "Heiko", "Andy", "Buffy", "Bernie", "Markus", "Jens"]
     plot_Hcp.plot_yearly_avg_hcp(json_file, players, save_path=None, show=True)
@@ -57,8 +37,8 @@ def render(st):
         years = sorted(per_year_vals.keys())
         means = [sum(per_year_vals[y]) / len(per_year_vals[y]) for y in years]
         if years:
-            text15("Jährlicher Mittelwert Gesp.Hcp aller Spieler")
-            fig, ax = plt.subplots(figsize=(10, 6))
+            st.text("Jährlicher Mittelwert Gesp.Hcp aller Spieler")
+            fig, ax = plt.subplots(figsize=(15, 6))
             # Styling similar to Verlauf Hcp
             LABEL_FS = 16
             TICK_FS = 14
@@ -182,7 +162,7 @@ def render(st):
         except Exception:
             pass
         # Streamlit text heading above the table (no matplotlib title)
-        text15("GruppoHcp – Letzte 6 Runden")
+        st.text("GruppoHcp – Letzte 6 Runden")
         st.pyplot(fig)
         plt.close(fig)
 
@@ -220,7 +200,7 @@ def render(st):
                 pass
         if title:
             # Render heading via Streamlit instead of matplotlib title
-            text15(title)
+            st.text(title)
         st.pyplot(fig)
         plt.close(fig)
 
@@ -435,7 +415,7 @@ def render(st):
 
     total_geld = sum(geld_sums.values())
     if total_geld <= 0:
-        text15("Geld-Verteilung (Summe)")
+        st.text("Geld-Verteilung (Summe)")
         st.info("Keine Geld-Daten vorhanden.")
     else:
         for p in selected_players:
@@ -447,7 +427,7 @@ def render(st):
         # Ensure colors list populated (fallback)
         if not any(colors):
             colors = None
-        text15("Monetenkuchen Alltime")
+        st.text("Monetenkuchen Alltime")
         fig, ax = plt.subplots(figsize=(8, 8))
         def fmt_euro(pct):
             abs_val = pct * sum(sizes) / 100.0

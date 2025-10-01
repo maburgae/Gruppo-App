@@ -108,22 +108,39 @@ def render(st):
         golf_data = json.load(f)
     key = list(golf_data.keys())[0]
     data = golf_data[key]
-    # Build DataFrame for editing
+    # Build DataFrame for editing (remove index column; use explicit 'Spieler' column; no 'Score ' prefixes)
     # First two rows: Par, Hcp
-    edit_rows = [ ["Par"] + data["Par"], ["Hcp"] + data["Hcp"] ]
-    # Next: Score rows for each player
+    edit_rows = [["Par"] + data["Par"], ["Hcp"] + data["Hcp"]]
+    # Next: one row per player with their scores
     for player, pdata in data["Spieler"].items():
-        edit_rows.append([f"Score {player}"] + pdata["Score"])
-    # Prepare columns: 18 holes + 3 extra columns for LD, N2TP, Ladies
-    columns = ["Type"] + [f"{i+1}" for i in range(18)] + ["LD", "N2TP", "Ladies"]
-    # Add LD, N2TP, Ladies values for each player to their score row
+        edit_rows.append([player] + pdata.get("Score", []))
+    # Prepare columns: Spieler + 18 holes + 3 extra columns for LD, N2TP, Ladies
+    columns = ["Spieler"] + [f"{i+1}" for i in range(18)] + ["LD", "N2TP", "Ladies"]
+    # Append LD, N2TP, Ladies values for each player row
     for idx, player in enumerate(data["Spieler"].keys()):
-        score_row_idx = 2 + idx
+        row_idx = 2 + idx
         pdata = data["Spieler"][player]
-        edit_rows[score_row_idx] += [pdata.get("LD", None), pdata.get("N2TP", None), pdata.get("Ladies", None)]
+        # Ensure row length before extending
+        while len(edit_rows[row_idx]) < 1 + 18:
+            edit_rows[row_idx].append(None)
+        edit_rows[row_idx] += [pdata.get("LD", None), pdata.get("N2TP", None), pdata.get("Ladies", None)]
+    # Pad all rows to full length
+    for r in edit_rows:
+        while len(r) < len(columns):
+            r.append(None)
     edit_df = pd.DataFrame(edit_rows, columns=columns)
     text15("Scorecard Tabelle")
-    st.session_state.golf_df = st.data_editor(edit_df, key="golf_df_editor_full", width='stretch', column_config={col: {"width": "small"} for col in edit_df.columns})
+    # Configure editor: hide index, pin Spieler column to the left (if supported), narrow widths
+    col_cfg = {col: {"width": "small"} for col in edit_df.columns}
+    # Try to pin the Spieler column to the left; if unsupported, it's simply ignored
+    col_cfg["Spieler"]["pinned"] = "left"
+    st.session_state.golf_df = st.data_editor(
+        edit_df,
+        key="golf_df_editor_full",
+        width='stretch',
+        hide_index=True,
+        column_config=col_cfg,
+    )
 
     # Knopf zum Speichern der Tabelle ins JSON
     if st.button("Tabelle speichern"):
@@ -141,10 +158,10 @@ def render(st):
         new_ld = {}
         new_n2tp = {}
         new_ladies = {}
-        # Only process score rows (skip Par/Hcp)
+        # Only process player rows (skip Par/Hcp)
         for idx in range(2, edited_df.shape[0]):
             row = edited_df.iloc[idx]
-            player = row.iloc[0].replace("Score ", "")
+            player = str(row.iloc[0]).strip()  # already just the player name (no 'Score ' prefix)
             scores = [nan_to_null_int(row.iloc[i]) for i in range(1, 19)]
             ld = nan_to_null_int(row.iloc[19])
             n2tp = nan_to_null_int(row.iloc[20])
