@@ -2,7 +2,8 @@ def render(st):
     # --- Yearly Average Hcp Plot ---
     import streamlit as st
     import plot_Hcp
-    #st.subheader("Jährliches Durschnitts Hcp")
+    # Heading above the yearly average chart
+    st.text("Jährliches Durchschnitts-Hcp pro Spieler")
     json_file = "json/allrounds.json"
     players = ["Marc", "Heiko", "Andy", "Buffy", "Bernie", "Markus", "Jens"]
     plot_Hcp.plot_yearly_avg_hcp(json_file, players, save_path=None, show=True)
@@ -41,10 +42,8 @@ def render(st):
     def make_table_plot(results: dict[str, list[tuple[str, int]]], st, round_avg=True):
         players = list(results.keys())
         nrows = max(len(v) for v in results.values())
-        row_labels = []
         table_data = []
         for i in range(nrows):
-            row_label = None
             row_vals = []
             for p in players:
                 if i < len(results[p]):
@@ -52,12 +51,9 @@ def render(st):
                     date_fmt = datetime.strptime(date_str, "%d.%m.%Y").strftime("%d.%m.%y")
                     # Remove mathtext formatting for table cells
                     val = f"{date_fmt}\n{hcp}"
-                    if not row_label:
-                        row_label = f"Round {i+1}"
                 else:
                     val = "-"
                 row_vals.append(val)
-            row_labels.append(row_label)
             table_data.append(row_vals)
         avg_vals = []
         for p in players:
@@ -73,36 +69,29 @@ def render(st):
                 avg_vals.append(avg_str)
             else:
                 avg_vals.append("-")
-        row_labels.append("Average")
         table_data.append(avg_vals)
         # Font size controls for GruppoHcp table
-        BODY_FS = 28   # body font size (adjust here)
-        HEADER_FS = 28 # header/row-label font size (same as body)
+        BODY_FS = 30   # body font size (adjust here)
+        HEADER_FS = BODY_FS  # column header font size (same as body)
         ROW_SCALE_X = 1.35
-        ROW_SCALE_Y = 4.9 * 1.2  # +20% row height
+        ROW_SCALE_Y = 4.9 * 1.4  # +40% row height
 
         fig, ax = plt.subplots(figsize=(len(players) * 1.8, 9.5))
         ax.axis("off")
         table = ax.table(
             cellText=table_data,
-            rowLabels=row_labels,
+            # rowLabels removed to hide the first column with 'Round x'
             colLabels=players,
             loc="center",
             cellLoc="center"
         )
         table.auto_set_font_size(False)
-        table.set_fontsize(BODY_FS)
+        table.set_fontsize(BODY_FS)  # body font size applied to all cells
         table.scale(ROW_SCALE_X, ROW_SCALE_Y)
         # Column headers font size (same as body)
         for j in range(len(players)):
             try:
                 table[(-1, j)].get_text().set_fontsize(HEADER_FS)
-            except Exception:
-                pass
-        # Row labels font size (same as body)
-        for i in range(len(row_labels)):
-            try:
-                table[(i, -1)].get_text().set_fontsize(HEADER_FS)
             except Exception:
                 pass
         # Ensure all non-average rows are normal weight
@@ -112,19 +101,18 @@ def render(st):
             for i in range(nrows - 1):  # all except last (Average)
                 for j in range(ncols):
                     table[(i, j)].get_text().set_fontweight('normal')
-                table[(i, -1)].get_text().set_fontweight('normal')  # row label
         except Exception:
             pass
-        # Make the last 'Average' row bold (cells and its row label)
+        # Make the last 'Average' row bold (cells only)
         try:
-            avg_row_idx = len(table_data)
+            avg_row_idx = len(table_data)  # last row index
             ncols = len(players)
             for j in range(ncols):
                 table[(avg_row_idx, j)].get_text().set_fontweight('bold')
-            table[(avg_row_idx, -1)].get_text().set_fontweight('bold')
         except Exception:
             pass
-        plt.title("GruppoHcp – Letzte 6 Runden", fontsize=16, pad=26)
+        # Streamlit text heading above the table (no matplotlib title)
+        st.text("GruppoHcp – Letzte 6 Runden")
         st.pyplot(fig)
         plt.close(fig)
 
@@ -142,16 +130,16 @@ def render(st):
     # --- Helper to render generic tables with unified font sizes ---
     def display_table(headers, rows, title=None):
         # Font size controls for other tables
-        BODY_FS = 28   # body font size (adjust here)
-        HEADER_FS = 28 # header font size; same as body per requirement
+        BODY_FS = 35   # body font size (adjust here)
+        HEADER_FS = BODY_FS  # header font size; same as body per requirement
         SCALE_X = 1.4
-        SCALE_Y = 2.8
+        SCALE_Y = 3.5
 
         fig, ax = plt.subplots(figsize=(13.5, 0.7 + 0.75 * len(rows)))
         ax.axis('off')
         table = ax.table(cellText=[headers] + rows, loc='center', cellLoc='center')
         table.auto_set_font_size(False)
-        table.set_fontsize(BODY_FS)
+        table.set_fontsize(BODY_FS)  # apply body font size
         table.scale(SCALE_X, SCALE_Y)
         # Header row uses same font size as body
         ncols = len(headers)
@@ -161,7 +149,8 @@ def render(st):
             except Exception:
                 pass
         if title:
-            plt.title(title, fontsize=16)
+            # Render heading via Streamlit instead of matplotlib title
+            st.text(title)
         st.pyplot(fig)
         plt.close(fig)
 
@@ -250,7 +239,7 @@ def render(st):
             f"{bogies_avgs[player]:.2f}",
             f"{strich_avgs[player]:.2f}"
         ])
-    display_table(["Spieler", "Birdies/Runde", "Pars/Runde", "Bogies/Runde", "Strich/Runde"], combined_rows, "Durchschnittswerte pro Runde")
+    display_table(["Spieler", "Birdies/R", "Pars/R", "Bogies/R", "Strich/R"], combined_rows, "Durchschnittswerte pro Runde")
 
 if __name__ == "__main__":
     import streamlit as st
