@@ -75,7 +75,13 @@ def render(st):
                 avg_vals.append("-")
         row_labels.append("Average")
         table_data.append(avg_vals)
-        fig, ax = plt.subplots(figsize=(len(players) * 1.7, 9.0))
+        # Font size controls for GruppoHcp table
+        BODY_FS = 28   # body font size (adjust here)
+        HEADER_FS = 28 # header/row-label font size (same as body)
+        ROW_SCALE_X = 1.35
+        ROW_SCALE_Y = 4.9 * 1.2  # +20% row height
+
+        fig, ax = plt.subplots(figsize=(len(players) * 1.8, 9.5))
         ax.axis("off")
         table = ax.table(
             cellText=table_data,
@@ -85,9 +91,40 @@ def render(st):
             cellLoc="center"
         )
         table.auto_set_font_size(False)
-        table.set_fontsize(20)
-        table.scale(1.2, 4.0)
-        plt.title("GruppoHcp – Letzte 6 Runden", fontsize=20, pad=28)
+        table.set_fontsize(BODY_FS)
+        table.scale(ROW_SCALE_X, ROW_SCALE_Y)
+        # Column headers font size (same as body)
+        for j in range(len(players)):
+            try:
+                table[(-1, j)].get_text().set_fontsize(HEADER_FS)
+            except Exception:
+                pass
+        # Row labels font size (same as body)
+        for i in range(len(row_labels)):
+            try:
+                table[(i, -1)].get_text().set_fontsize(HEADER_FS)
+            except Exception:
+                pass
+        # Ensure all non-average rows are normal weight
+        try:
+            nrows = len(table_data)
+            ncols = len(players)
+            for i in range(nrows - 1):  # all except last (Average)
+                for j in range(ncols):
+                    table[(i, j)].get_text().set_fontweight('normal')
+                table[(i, -1)].get_text().set_fontweight('normal')  # row label
+        except Exception:
+            pass
+        # Make the last 'Average' row bold (cells and its row label)
+        try:
+            avg_row_idx = len(table_data)
+            ncols = len(players)
+            for j in range(ncols):
+                table[(avg_row_idx, j)].get_text().set_fontweight('bold')
+            table[(avg_row_idx, -1)].get_text().set_fontweight('bold')
+        except Exception:
+            pass
+        plt.title("GruppoHcp – Letzte 6 Runden", fontsize=16, pad=26)
         st.pyplot(fig)
         plt.close(fig)
 
@@ -102,15 +139,29 @@ def render(st):
         data = json.load(f)
     selected_players = ["Andy", "Marc", "Bernie", "Heiko", "Markus", "Buffy", "Jens"]
 
+    # --- Helper to render generic tables with unified font sizes ---
     def display_table(headers, rows, title=None):
-        fig, ax = plt.subplots(figsize=(13.0, 0.6 + 0.6 * len(rows)))
+        # Font size controls for other tables
+        BODY_FS = 28   # body font size (adjust here)
+        HEADER_FS = 28 # header font size; same as body per requirement
+        SCALE_X = 1.4
+        SCALE_Y = 2.8
+
+        fig, ax = plt.subplots(figsize=(13.5, 0.7 + 0.75 * len(rows)))
         ax.axis('off')
         table = ax.table(cellText=[headers] + rows, loc='center', cellLoc='center')
         table.auto_set_font_size(False)
-        table.set_fontsize(20)
-        table.scale(1.3, 2.1)
+        table.set_fontsize(BODY_FS)
+        table.scale(SCALE_X, SCALE_Y)
+        # Header row uses same font size as body
+        ncols = len(headers)
+        for j in range(ncols):
+            try:
+                table[(0, j)].get_text().set_fontsize(HEADER_FS)
+            except Exception:
+                pass
         if title:
-            plt.title(title, fontsize=20)
+            plt.title(title, fontsize=16)
         st.pyplot(fig)
         plt.close(fig)
 
@@ -159,16 +210,13 @@ def render(st):
     col_sums = [0] * len(filtered_players_sorted)
     for platz in range(1, 9):
         row = [platz]
-        row_sum = 0
         for i, player in enumerate(filtered_players_sorted):
             val = platz_counts[player][platz]
             row.append(val)
-            row_sum += val
             col_sums[i] += val
-        row.append(row_sum)
         platz_rows.append(row)
-    sum_row = ["Summe"] + col_sums + [sum(col_sums)]
-    display_table(["Platz"] + filtered_players_sorted + ["Summe"], platz_rows + [sum_row], "Plätze Übersicht")
+    # Removed last column 'Summe' per request
+    display_table(["Platz"] + filtered_players_sorted, platz_rows, "Plätze Übersicht")
 
     # --- Combined Birdies, Pars, Bogies, Strich Table ---
     def get_avg_stat(stat_key):

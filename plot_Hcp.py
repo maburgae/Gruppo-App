@@ -1,4 +1,3 @@
-
 # plot_yearly_avg_hcp.py
 import json
 import matplotlib.pyplot as plt
@@ -59,11 +58,21 @@ def plot_yearly_avg_hcp(json_file: str, players: list[str], save_path: str | Non
         else:
             print(f"[info] No Hcp data for '{p}', skipping.")
 
-    ax.set_xlabel("Year")
-    ax.set_ylabel("Average Hcp")
-    ax.set_title("Yearly Average Hcp per Player")
+    # --- Font size controls for the Yearly Average diagram ---
+    TITLE_FS = 20   # Title font size (adjust here)
+    LABEL_FS = 16   # Axis label font size (adjust here)
+    TICK_FS = 14    # Axis tick font size (adjust here)
+    LEGEND_FS = 14  # Legend font size (adjust here)
+
+    ax.set_xlabel("Year", fontsize=LABEL_FS)
+    ax.set_ylabel("Average Hcp", fontsize=LABEL_FS)
+    ax.set_title("Yearly Average Hcp per Player", fontsize=TITLE_FS)
+
+    # Ticks font size
+    ax.tick_params(axis='both', labelsize=TICK_FS)
+
     ax.grid(True)
-    ax.legend()
+    ax.legend(fontsize=LEGEND_FS)
     fig.tight_layout()
 
     if save_path:
@@ -76,8 +85,6 @@ def plot_yearly_avg_hcp(json_file: str, players: list[str], save_path: str | Non
 
     # Close the figure to free memory
     plt.close(fig)
-
-    # plt.close(fig)
 
 
 def main():
