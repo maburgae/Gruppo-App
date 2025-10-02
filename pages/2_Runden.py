@@ -68,12 +68,32 @@ def render(st):
                 st.image(image, width='stretch')
 
                 # Extract file name for scorecards
-                image_path2 = os.path.join(directory2, image_file)
-                if os.path.exists(image_path2):
-                    image2 = Image.open(image_path2)
-                    st.image(image2, width='stretch')
-                else:
-                    print(f"Image not found: {image_path2}")
+                front_path = os.path.join(directory2, f"{file_name}_front.png")
+                back_path = os.path.join(directory2, f"{file_name}_back.png")
+                single_path = os.path.join(directory2, image_file)
+
+                # Prefer split scorecards (front/back). If not available, fall back to single file
+                shown_any = False
+                if os.path.exists(front_path):
+                    try:
+                        image_front = Image.open(front_path)
+                        st.image(image_front, width='stretch')
+                        shown_any = True
+                    except Exception:
+                        pass
+                if os.path.exists(back_path):
+                    try:
+                        image_back = Image.open(back_path)
+                        st.image(image_back, width='stretch')
+                        shown_any = True
+                    except Exception:
+                        pass
+                if not shown_any and os.path.exists(single_path):
+                    try:
+                        image_single = Image.open(single_path)
+                        st.image(image_single, width='stretch')
+                    except Exception:
+                        print(f"Unable to render: {single_path}")
     else:
         st.error("The provided directory does not exist. Please check the path.")
 

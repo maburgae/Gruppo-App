@@ -81,7 +81,7 @@ def main():
     for key in data.keys():
         print(f"Key: {key}")
         players = load_round(json_file, key)
-        make_ranking_table(players, save_path=f"rankings/{key}.png", show=False)   
+        # make_ranking_table(players, save_path=f"rankings/{key}.png", show=False)   
         show_scorecard(json_file, key, save_path=f"scorecards/{key}.png", show=False)
 
 if __name__ == "__main__":

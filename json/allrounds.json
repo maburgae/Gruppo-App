@@ -1,93 +1,5 @@
 {
-  "07.09.2002": {
-    "Ort": "Pinetina",
-    "Par": null,
-    "Hcp": null,
-    "Spieler": {
-      "Flo": {
-        "Platz": 1,
-        "Netto": 40,
-        "Geld": 0,
-        "Gesp.Hcp": 27,
-        "Birdies": null,
-        "Pars": 1,
-        "Bogies": 10,
-        "Strich": 2,
-        "Score": null,
-        "DayHcp": 23
-      },
-      "Jens": {
-        "Platz": 2,
-        "Netto": 34,
-        "Geld": 0,
-        "Gesp.Hcp": 41,
-        "Birdies": null,
-        "Pars": 1,
-        "Bogies": 4,
-        "Strich": 3,
-        "Score": null,
-        "DayHcp": 43
-      },
-      "Marc": {
-        "Platz": 3,
-        "Netto": 27,
-        "Geld": 15,
-        "Gesp.Hcp": 32,
-        "Birdies": null,
-        "Pars": 1,
-        "Bogies": 5,
-        "Strich": 3,
-        "Score": null,
-        "DayHcp": 41
-      },
-      "Bernie": {
-        "Platz": 4,
-        "Netto": 25,
-        "Geld": 15,
-        "Gesp.Hcp": 35,
-        "Birdies": null,
-        "Pars": 2,
-        "Bogies": 5,
-        "Strich": 4,
-        "Score": null,
-        "DayHcp": 46
-      },
-      "Andy": {
-        "Platz": null,
-        "Netto": null,
-        "Geld": 10,
-        "Gesp.Hcp": null,
-        "Birdies": null,
-        "Pars": null,
-        "Bogies": null,
-        "Strich": null,
-        "Score": null
-      },
-      "Buffy": {
-        "Platz": null,
-        "Netto": null,
-        "Geld": 10,
-        "Gesp.Hcp": null,
-        "Birdies": null,
-        "Pars": null,
-        "Bogies": null,
-        "Strich": null,
-        "Score": null
-      },
-      "Heiko": {
-        "Platz": null,
-        "Netto": null,
-        "Geld": 10,
-        "Gesp.Hcp": null,
-        "Birdies": null,
-        "Pars": null,
-        "Bogies": null,
-        "Strich": null,
-        "Score": null
-      }
-    }
-  },
-  "08.09.2002": {
+    "08.09.2002": {
     "Ort": "Menaggio",
     "Par": null,
     "Hcp": null,
@@ -36125,8 +36037,8 @@
         "Ladies": 1,
         "Pars": 5,
         "Bogies": 4,
-        "N2TP": null,
-        "LD": 1,
+        "N2TP": 1,
+        "LD": null,
         "Geld": 30,
         "DayHcp_calc": 27,
         "NettoP": [
@@ -36500,7 +36412,7 @@
         "Ladies": 1,
         "Pars": 4,
         "Bogies": 6,
-        "N2TP": 1,
+        "N2TP": null,
         "LD": 1,
         "Geld": 20,
         "DayHcp_calc": 24,

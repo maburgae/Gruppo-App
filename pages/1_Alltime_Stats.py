@@ -450,6 +450,43 @@ def render(st):
         st.pyplot(fig)
         plt.close(fig)
 
+    # --- Absolute totals: Ladies, Birdies, Pars, Bogies ---
+    # Sum absolute counts across all rounds for selected players
+    totals_ladies = {p: 0 for p in selected_players}
+    totals_birdies = {p: 0 for p in selected_players}
+    totals_pars = {p: 0 for p in selected_players}
+    totals_bogies = {p: 0 for p in selected_players}
+
+    for round_obj in data.values():
+        sp = round_obj.get("Spieler", {})
+        for p in selected_players:
+            pdata = sp.get(p, {})
+            # Ladies can be int/float; ignore NaN/None
+            lv = pdata.get("Ladies")
+            if isinstance(lv, (int, float)) and not (isinstance(lv, float) and math.isnan(lv)):
+                totals_ladies[p] += int(lv)
+            # Birdies/Pars/Bogies are integers per round; add if present
+            bv = pdata.get("Birdies")
+            if isinstance(bv, int):
+                totals_birdies[p] += bv
+            pv = pdata.get("Pars")
+            if isinstance(pv, int):
+                totals_pars[p] += pv
+            gv = pdata.get("Bogies")
+            if isinstance(gv, int):
+                totals_bogies[p] += gv
+
+    abs_rows = []
+    for p in selected_players:
+        abs_rows.append([
+            p,
+            str(totals_ladies[p]),
+            str(totals_birdies[p]),
+            str(totals_pars[p]),
+            str(totals_bogies[p]),
+        ])
+    display_table(["Spieler", "Ladies", "Birdies", "Pars", "Bogies"], abs_rows, "Absolut: Ladies, Birdies, Pars, Bogies")
+
 if __name__ == "__main__":
     import streamlit as st
     render(st)

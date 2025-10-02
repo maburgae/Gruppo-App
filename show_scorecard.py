@@ -65,117 +65,128 @@ def show_scorecard(json_file: str, date_key: str, save_path=None, show=True):
     col_labels = [""] + [str(h) for h in holes]
     cell_data = [[label] + row for label, row in zip(row_labels, rows)]
 
-    fig, ax = plt.subplots(figsize=(14, 7))
-    ax.axis("off")
+    # Helper to render a half (start inclusive, end exclusive) of the scorecard
+    def render_half(start_idx: int, end_idx: int, out_path: str | None, date_key: str):
+        local_cols = end_idx - start_idx
+        # Slice each row to the requested hole range
+        cell_data_half = [[label] + row[start_idx:end_idx] for label, row in zip(row_labels, rows)]
 
-    # Remove extra whitespace around the table
-    # Fill the entire figure with the axes and eliminate padding
-    try:
-        fig.tight_layout(pad=0)
-    except Exception:
-        pass
-    fig.subplots_adjust(left=0, right=1, top=1, bottom=0)
-    ax.set_position([0, 0, 1, 1])
+        fig, ax = plt.subplots(figsize=(20, 15))
+        ax.axis("off")
 
-    table = ax.table(cellText=cell_data, cellLoc="center", loc="center")
-
-    table.auto_set_font_size(False)
-    table.set_fontsize(14)
-    table.scale(1.0, 1.5)
-
-    # Reduce internal cell padding to the minimum so there's no extra space
-    for cell in table.get_celld().values():
+        # Remove extra whitespace around the table
         try:
-            cell.set_pad(0.01)
+            fig.tight_layout(pad=0)
         except Exception:
             pass
+        fig.subplots_adjust(left=0, right=1, top=1, bottom=0)
+        ax.set_position([0, 0, 1, 1])
 
-    # Make the first column wider
-    for key, cell in table.get_celld().items():
-        if key[1] == 0:
-            cell.set_width(0.15)  # Increase width of first column
+        table = ax.table(cellText=cell_data_half, cellLoc="center", loc="center")
 
-    # Make Par values bold
-    for col_idx in range(1, len(holes)+1):
-        cell = table[(1, col_idx)]  # Par row is index 1
-        cell.set_text_props(weight='bold')
+        table.auto_set_font_size(False)
+        table.set_fontsize(40)
+        table.scale(1.0, 4.5)
 
-    # Coloring scores and nettopoints
-    for row_idx, pname in enumerate(row_labels):
-        if pname in ("Hole", "Par", "Hcp"):
-            continue
-        # Scores row
-        if not pname.endswith("NettoP"):
-            scores = players[pname.split(" (", 1)[0]]["Score"]
-            for hole_idx in range(18):
-                try:
-                    cell = table[(row_idx, hole_idx + 1)]
-                except KeyError:
-                    continue
-                sc = scores[hole_idx] if hole_idx < len(scores) else None
-                par = pars[hole_idx] if hole_idx < len(pars) else None
-                if sc is None:
-                    cell.set_facecolor("red")
-                    continue
-                if par is None:
-                    cell.set_facecolor("red")
-                    continue
-                if sc == par - 1:
-                    cell.set_facecolor("violet")
-                elif sc == par:
-                    cell.set_facecolor("lightgreen")
-                elif sc == par + 1:
-                    pass
-                elif sc == par + 2:
-                    cell.set_facecolor("khaki")
-                else:
-                    cell.set_facecolor("red")
-        # NettoP row: font color only, no background
-        else:
-            nettopoints = players[pname.replace(" NettoP","")]["NettoP"]
-            for hole_idx in range(18):
-                try:
-                    cell = table[(row_idx, hole_idx + 1)]
-                except KeyError:
-                    continue
-                np = nettopoints[hole_idx] if hole_idx < len(nettopoints) else None
-                cell.set_facecolor("white")  # No background
-                text = cell.get_text()
-                text.set_weight('bold')  # Make NettoP numbers bold
-                if np == 0:
-                    text.set_color("red")
-                elif np == 1:
-                    text.set_color("yellow")
-                elif np == 2:
-                    text.set_color("black")
-                elif isinstance(np, int) and np >= 3:
-                    text.set_color("green")
-                else:
-                    text.set_color("black")
+        # Reduce internal cell padding
+        for cell in table.get_celld().values():
+            try:
+                cell.set_pad(0.01)
+            except Exception:
+                pass
 
-    # plt.title(f"Scorecard – {date_key}", fontsize=14, pad=10)  # Reduce pad for less space above table
-    """
-    # Add legend
-    legend_elements = [
-        Patch(facecolor="violet", label="Birdie"),
-        Patch(facecolor="lightgreen", label="Par"),
-        Patch(facecolor="none", edgecolor="black", label="Bogey"),
-        Patch(facecolor="khaki", label="Double Bogey"),
-        Patch(facecolor="red", label="Alles andere / x"),
-    ]
-    ax.legend(handles=legend_elements, loc="upper center", bbox_to_anchor=(0.5, -0.13),
-              ncol=3, frameon=False)  # Move legend closer to table
-    """
+        # Make the first column wider
+        for key, cell in table.get_celld().items():
+            if key[1] == 0:
+                cell.set_width(0.20)  # a bit wider for label column
+
+        # Make Par values bold (row index 1)
+        for col_idx in range(1, local_cols + 1):
+            cell = table[(1, col_idx)]
+            cell.set_text_props(weight='bold')
+
+        # Coloring scores and nettopoints
+        for row_idx, pname in enumerate(row_labels):
+            if pname in ("Hole", "Par", "Hcp"):
+                continue
+            # Scores row
+            if not pname.endswith("NettoP"):
+                p_base = pname.split(" (", 1)[0]
+                scores = players.get(p_base, {}).get("Score", [])
+                for off in range(local_cols):
+                    global_hole = start_idx + off
+                    try:
+                        cell = table[(row_idx, off + 1)]
+                    except KeyError:
+                        continue
+                    sc = scores[global_hole] if global_hole < len(scores) else None
+                    par = pars[global_hole] if global_hole < len(pars) else None
+                    if sc is None or par is None:
+                        cell.set_facecolor("red")
+                        continue
+                    if sc == par - 1:
+                        cell.set_facecolor("violet")
+                    elif sc == par:
+                        cell.set_facecolor("lightgreen")
+                    elif sc == par + 1:
+                        pass
+                    elif sc == par + 2:
+                        cell.set_facecolor("khaki")
+                    else:
+                        cell.set_facecolor("red")
+            # NettoP row: font color only, no background
+            else:
+                p_base = pname.replace(" NettoP", "")
+                nettopoints = players.get(p_base, {}).get("NettoP", [])
+                for off in range(local_cols):
+                    global_hole = start_idx + off
+                    try:
+                        cell = table[(row_idx, off + 1)]
+                    except KeyError:
+                        continue
+                    np = nettopoints[global_hole] if global_hole < len(nettopoints) else None
+                    cell.set_facecolor("white")  # No background
+                    text = cell.get_text()
+                    text.set_weight('bold')
+                    if np == 0:
+                        text.set_color("red")
+                    elif np == 1:
+                        text.set_color("yellow")
+                    elif np == 2:
+                        text.set_color("black")
+                    elif isinstance(np, int) and np >= 3:
+                        text.set_color("green")
+                    else:
+                        text.set_color("black")
+
+        # Save cropped exactly to table
+        if out_path:
+            fig.canvas.draw()
+            bbox = table.get_window_extent(renderer=fig.canvas.get_renderer())
+            bbox_inches = bbox.transformed(fig.dpi_scale_trans.inverted())
+            fig.savefig(out_path, dpi=100, bbox_inches=bbox_inches, pad_inches=0)
+            print(f"[ok] Saved to {out_path}")
+        if show:
+            plt.show()
+        plt.close(fig)
+
+    # Decide output paths for the two halves
+    front_path = None
+    back_path = None
     if save_path:
-        # Draw first so we can compute the exact table bounding box and crop with zero margins
-        fig.canvas.draw()
-        bbox = table.get_window_extent(renderer=fig.canvas.get_renderer())
-        bbox_inches = bbox.transformed(fig.dpi_scale_trans.inverted())
-        fig.savefig(save_path, dpi=100, bbox_inches=bbox_inches, pad_inches=0)
-        print(f"[ok] Saved to {save_path}")
-    if show:
-        plt.show()
-    plt.close(fig)
+        import os
+        root, ext = os.path.splitext(save_path)
+
+        #front_path = save_path  # keep original path for holes 1-9
+        front_path = f"scorecards/{date_key}_front{ext}"  # holes 10-18
+        back_path = f"scorecards/{date_key}_back{ext}"  # holes 10-18
+
+        print(front_path)
+        print(back_path)
+
+    # Render 1–9 and 10–18
+    render_half(0, 9, front_path, date_key)
+    render_half(9, 18, back_path, date_key)
 
 
 def main():
