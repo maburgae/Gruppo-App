@@ -134,12 +134,18 @@ def render(st):
     col_cfg = {col: {"width": "small"} for col in edit_df.columns}
     # Try to pin the Spieler column to the left; if unsupported, it's simply ignored
     col_cfg["Spieler"]["pinned"] = "left"
+
+    # Helper: mark editor changes without triggering heavy computations
+    def _mark_golf_df_dirty():
+        st.session_state["golf_df_dirty"] = True
+
     st.session_state.golf_df = st.data_editor(
         edit_df,
         key="golf_df_editor_full",
         width='stretch',
         hide_index=True,
         column_config=col_cfg,
+        on_change=_mark_golf_df_dirty,
     )
 
     # Knopf zum Speichern der Tabelle ins JSON
@@ -187,67 +193,54 @@ def render(st):
                 data["Spieler"][player]["Ladies"] = new_ladies[player]
         with open("json/golf_df/golf_df.json", "w", encoding="utf-8") as f:
             json.dump(golf_data, f, ensure_ascii=False, indent=2)
+        st.session_state["golf_df_dirty"] = False
         st.success("Tabelle erfolgreich gespeichert!")
 
-    # Knopf "Berechne den Tag"
+    # Separate heavy computation button
     if st.button("Berechne den Tag"):
-        result = berechne_den_tag_main()
-        st.session_state.konf_output = result
-        # Nach der Berechnung: Scorecard (Front/Back) und Ranking für den Spieltag erzeugen
         try:
-            from ranking_table import load_round, make_ranking_table
-            from show_scorecard import show_scorecard
-            # Spieltag-Schlüssel aus golf_df lesen
-            with open("json/golf_df/golf_df.json", "r", encoding="utf-8") as f:
-                _tag = json.load(f)
-            if not isinstance(_tag, dict) or len(_tag) == 0:
-                raise ValueError("golf_df.json enthält keinen Spieltag-Schlüssel")
-            date_key = next(iter(_tag.keys()))
-            # Daten laden und Verzeichnisse sicherstellen
-            players = load_round("json/golf_df/golf_df.json", date_key)
-            os.makedirs("rankings", exist_ok=True)
-            os.makedirs("scorecards", exist_ok=True)
-            # Ranking erzeugen
-            make_ranking_table(players, save_path=f"rankings/{date_key}.png", show=False)
-            # Scorecard split (Front/Back) erzeugen
-            show_scorecard("json/golf_df/golf_df.json", date_key, save_path=f"scorecards/{date_key}.png", show=False)
-            # Previews in pics/ aktualisieren
+            result = berechne_den_tag_main()
+            st.session_state.konf_output = result
+            # Nach Berechnung: Previews in pics/ aktualisieren
             try:
                 import shutil
+                with open("json/golf_df/golf_df.json", "r", encoding="utf-8") as f:
+                    _tag = json.load(f)
+                date_key = next(iter(_tag.keys()))
+                os.makedirs("rankings", exist_ok=True)
+                os.makedirs("scorecards", exist_ok=True)
                 src_front = f"scorecards/{date_key}_front.png"
                 src_back = f"scorecards/{date_key}_back.png"
                 src_rank = f"rankings/{date_key}.png"
+                # Ziel-Pfade
+                front_img = "pics/scorecard_front.png"
+                back_img = "pics/scorecard_back.png"
                 if os.path.exists(src_front):
-                    shutil.copy2(src_front, "pics/scorecard_front.png")
+                    shutil.copy2(src_front, front_img)
                 if os.path.exists(src_back):
-                    shutil.copy2(src_back, "pics/scorecard_back.png")
+                    shutil.copy2(src_back, back_img)
                 if os.path.exists(src_rank):
                     shutil.copy2(src_rank, "pics/ranking.png")
             except Exception:
                 pass
-            st.success(f"Scorecard und Ranking für {date_key} erzeugt.")
+            st.success("Tag berechnet und Previews aktualisiert.")
         except Exception as e:
-            st.warning(f"Generierung Scorecard/Ranking fehlgeschlagen: {e}")
+            st.error(f"Fehler bei der Tagesberechnung: {e}")
 
-    # Show scorecard images: prefer split front/back, fall back to single
+    # Bildpfade definieren
     front_img = "pics/scorecard_front.png"
     back_img = "pics/scorecard_back.png"
-    # single_img = "pics/scorecard.png"
+
     shown_any = False
     if os.path.exists(front_img):
-        st.image(front_img, caption="Scorecard Front", width='stretch')
+        st.image(front_img, caption="Scorecard Front", use_container_width=True)
         shown_any = True
     if os.path.exists(back_img):
-        st.image(back_img, caption="Scorecard Back", width='stretch')
+        st.image(back_img, caption="Scorecard Back", use_container_width=True)
         shown_any = True
 
     if os.path.exists("pics/ranking.png"):
-        st.image("pics/ranking.png", caption="Ranking", width='stretch')
-
-    # Knopf: "Tag -> Alle Runden"
-    if st.button("Tag -> Alle Runden"):
-        result = tag_to_alle_runden_main()
-        st.session_state.konf_output = result
+        st.image("pics/ranking.png", caption="Ranking", use_container_width=True)
 
     # Knopf: "Erzeuge Stats"
     if st.button("Erzeuge Stats"):

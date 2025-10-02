@@ -82,7 +82,7 @@ def calc_dayhcps_for_players_before_date(date_str: str) -> Dict[str, int]:
 
 def main():
 
-    date_str = "28.09.2025"
+    date_str = "03.10.2025"
     dayhcps = calc_dayhcps_for_players_before_date(date_str)
     # Write result to DayHcp.json with date as key
     

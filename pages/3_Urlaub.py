@@ -259,6 +259,55 @@ def render(st):
         st.pyplot(fig)
         plt.close(fig)
 
+    # 6) Ranglisten und Scorecards (nur Runden des gewählten Jahres)
+    import os
+    from PIL import Image
+    text15("Ranglisten und Scorecards (Jahr)")
+    directory1 = "rankings/"
+    directory2 = "scorecards/"
+
+    # Show in reverse chronological order like Runden page
+    for d, obj in sorted(rounds_for_year, key=lambda kv: datetime.strptime(kv[0], "%d.%m.%Y"), reverse=True):
+        ort = obj.get("Ort", "")
+        display_name = f"{d} ({ort})" if ort else d
+        st.markdown(f"<b style='font-size:15px'>{display_name}</b>", unsafe_allow_html=True)
+
+        # Ranking image
+        rank_path = os.path.join(directory1, f"{d}.png")
+        if os.path.exists(rank_path):
+            try:
+                image_rank = Image.open(rank_path)
+                st.image(image_rank, width='stretch')
+            except Exception:
+                pass
+
+        # Scorecards: prefer split images; fallback to single
+        front_path = os.path.join(directory2, f"{d}_front.png")
+        back_path = os.path.join(directory2, f"{d}_back.png")
+        single_path = os.path.join(directory2, f"{d}.png")
+
+        shown_any = False
+        if os.path.exists(front_path):
+            try:
+                image_front = Image.open(front_path)
+                st.image(image_front, width='stretch')
+                shown_any = True
+            except Exception:
+                pass
+        if os.path.exists(back_path):
+            try:
+                image_back = Image.open(back_path)
+                st.image(image_back, width='stretch')
+                shown_any = True
+            except Exception:
+                pass
+        if not shown_any and os.path.exists(single_path):
+            try:
+                image_single = Image.open(single_path)
+                st.image(image_single, width='stretch')
+            except Exception:
+                pass
+
 
 if __name__ == "__main__":
     import streamlit as st
