@@ -95,7 +95,7 @@ def render(st):
     # Knopf "Upload Scorecard" mit Dateiupload
     uploaded_file = st.file_uploader("Scorecard Datei auswählen", type=["jpg", "jpeg", "png"])
     if uploaded_file is not None:
-        file_path = f"pics/{uploaded_file.name}"
+        file_path = f"{uploaded_file.name}"
         with open(file_path, "wb") as f:
             f.write(uploaded_file.getbuffer())
         result = upload_scorecard_main(file_path)
@@ -233,14 +233,14 @@ def render(st):
 
     shown_any = False
     if os.path.exists(front_img):
-        st.image(front_img, caption="Scorecard Front", use_container_width=True)
+        st.image(front_img, caption="Scorecard Front", width='stretch')
         shown_any = True
     if os.path.exists(back_img):
-        st.image(back_img, caption="Scorecard Back", use_container_width=True)
+        st.image(back_img, caption="Scorecard Back", width='stretch')
         shown_any = True
 
     if os.path.exists("pics/ranking.png"):
-        st.image("pics/ranking.png", caption="Ranking", use_container_width=True)
+        st.image("pics/ranking.png", caption="Ranking", width='stretch')
 
     # Knopf: "Erzeuge Stats"
     if st.button("Erzeuge Stats"):
