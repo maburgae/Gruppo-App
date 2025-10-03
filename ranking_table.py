@@ -27,7 +27,7 @@ def make_ranking_table(players: dict, save_path: str | None = None, show: bool =
             pdata.get("Platz", "-"),
             name,
             pdata.get("Netto", 0),
-            pdata.get("G.Hcp", 0),
+            pdata.get("Gesp.Hcp", 0),
             pdata.get("Birdies", 0),
             pdata.get("Pars", 0),
             pdata.get("Bogies", 0),
@@ -38,13 +38,45 @@ def make_ranking_table(players: dict, save_path: str | None = None, show: bool =
             pdata.get("N2TP", 0)
         ])
 
-    # Sortieren nach Platz (aufsteigend)
-    rows.sort(key=lambda r: r[0])
+    # Sortieren nach Platz (aufsteigend), fehlende Werte ans Ende
+    def _platz_key(row):
+        p = row[0]
+        return p if isinstance(p, int) else 9999
+    rows.sort(key=_platz_key)
 
-    col_labels = ["Platz", "Spieler", "Netto", "Ges.Hcp", "Birdies", "Pars", "Bogies", "Strich", "Geld", "Ladies", "LD", "N2TP"]
+    col_labels = ["P", "Name", "Netto", "G.Hcp", "Birdies", "Pars", "Bogies", "Strich", "Geld", "L", "LD", "N2P"]
+
+    # Per-column width variables (tweak as needed)
+    width = 0.15
+    WIDTH_PLATZ = width*0.5
+    WIDTH_NAME = width*1.2
+    WIDTH_NETTO = width*1.2
+    WIDTH_GHCP = width*1.2
+    WIDTH_BIRDIES = width*1.2
+    WIDTH_PARS = width
+    WIDTH_BOGIES = width
+    WIDTH_STRICH = width
+    WIDTH_GELD = width
+    WIDTH_L = width*0.6
+    WIDTH_LD = width*0.6
+    WIDTH_N2TP = width*0.6
+    COL_WIDTHS = {
+        "Platz": WIDTH_PLATZ,
+        "Name": WIDTH_NAME,
+        "Netto": WIDTH_NETTO,
+        "G.Hcp": WIDTH_GHCP,
+        "Birdies": WIDTH_BIRDIES,
+        "Pars": WIDTH_PARS,
+        "Bogies": WIDTH_BOGIES,
+        "Strich": WIDTH_STRICH,
+        "Geld": WIDTH_GELD,
+        "L": WIDTH_L,
+        "LD": WIDTH_LD,
+        "N2TP": WIDTH_N2TP,
+    }
 
     # Tabelle plotten
-    fig, ax = plt.subplots(figsize=(8, len(rows) * 0.4 + 0))
+    fig, ax = plt.subplots(figsize=(7, len(rows) * 0.4 + 0))
     ax.axis("off")
 
     table = ax.table(
@@ -55,8 +87,23 @@ def make_ranking_table(players: dict, save_path: str | None = None, show: bool =
     )
 
     table.auto_set_font_size(False)
-    table.set_fontsize(13)
-    table.scale(1.2, 1.2)
+    table.set_fontsize(20)
+    table.scale(1.2, 1.7)  # increase row height by 20%
+
+    # Apply individual column widths
+    try:
+        n_rows = len(rows) + 1  # +1 for header row
+        for j, label in enumerate(col_labels):
+            width = COL_WIDTHS.get(label)
+            if width is None:
+                continue
+            for i in range(n_rows):
+                try:
+                    table[(i, j)].set_width(width)
+                except KeyError:
+                    pass
+    except Exception:
+        pass
 
     # plt.title("Ranking of the Day", fontsize=14, pad=20)
 
@@ -81,15 +128,15 @@ def main():
     
 
     players = load_round(json_file, date_key)
-    make_ranking_table(players, save_path=f"rankings/{date_key}.png", show=False) 
+    make_ranking_table(players, save_path=f"rankings/{date_key}.png", show=True) 
     """
     
     # Loop over all the first-level keys
     for key in data.keys():
         print(f"Key: {key}")
         players = load_round(json_file, key)
-        # make_ranking_table(players, save_path=f"rankings/{key}.png", show=False)   
-        show_scorecard(json_file, key, save_path=f"scorecards/{key}.png", show=False)
+        make_ranking_table(players, save_path=f"rankings/{key}.png", show=False)   
+        # show_scorecard(json_file, key, save_path=f"scorecards/{key}.png", show=False)
     
 if __name__ == "__main__":
     main()
