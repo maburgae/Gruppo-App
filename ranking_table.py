@@ -55,7 +55,7 @@ def make_ranking_table(players: dict, save_path: str | None = None, show: bool =
     )
 
     table.auto_set_font_size(False)
-    table.set_fontsize(10)
+    table.set_fontsize(13)
     table.scale(1.2, 1.2)
 
     # plt.title("Ranking of the Day", fontsize=14, pad=20)
@@ -71,18 +71,25 @@ def make_ranking_table(players: dict, save_path: str | None = None, show: bool =
 def main():
     json_file = "json/allrounds.json"
     #json_file = "json/golf_df/golf_df.json"
-    #date_key = "30.09.2025"  # gewünschtes Datum
-
     # Load JSON data from a file
     with open(json_file, 'r') as file:
         data = json.load(file)  # Parse the JSON file into a Python dictionary
+    ### one file
+    """
+    date_key = "02.10.2025"  # gewünschtes Datum
 
+    
+
+    players = load_round(json_file, date_key)
+    make_ranking_table(players, save_path=f"rankings/{date_key}.png", show=False) 
+    """
+    
     # Loop over all the first-level keys
     for key in data.keys():
         print(f"Key: {key}")
         players = load_round(json_file, key)
         # make_ranking_table(players, save_path=f"rankings/{key}.png", show=False)   
         show_scorecard(json_file, key, save_path=f"scorecards/{key}.png", show=False)
-
+    
 if __name__ == "__main__":
     main()
