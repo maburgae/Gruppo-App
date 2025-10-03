@@ -1,10 +1,17 @@
 import json
 from datetime import date, datetime
 
-def main(players: list[str] | None = None) -> str:
-    """Startet eine neue Runde. Platzhalter-Logik."""
+def main(players: list[str] | None = None, flights: dict[str, str] | None = None) -> str:
+    """Startet eine neue Runde. Optional können pro Spieler Flight-Werte übergeben werden.
+
+    Args:
+        players: Liste der Spielernamen.
+        flights: Mapping Spieler -> Flight (String). Leere Strings werden als None gespeichert.
+    """
     if players is None:
         players = []
+    if flights is None:
+        flights = {}
 
     json_path = "json/golf_df/golf_df.json"
     # Read in the existing golf_df.json file
@@ -32,6 +39,9 @@ def main(players: list[str] | None = None) -> str:
     }
 
     for name in players:
+        flight_val = flights.get(name)
+        if isinstance(flight_val, str) and flight_val.strip() == "":
+            flight_val = None
         round_data["Spieler"][name] = {
             "Platz": None,
             "Netto": None,
@@ -45,6 +55,7 @@ def main(players: list[str] | None = None) -> str:
             "Ladies": None, 
             "N2TP": None,
             "LD": None,
+            "Flight": flight_val,
             "Score": [None]*18,
             "NettoP": [None]*18
         }
@@ -55,4 +66,4 @@ def main(players: list[str] | None = None) -> str:
         json.dump(out, f, ensure_ascii=False, indent=2)
     print(f"Default golf JSON written to {json_path}")
 
-    return f"Neue Runde gestartet. Spieler: {players}"
+    return f"Neue Runde gestartet. Spieler: {players}. Flights: {flights}"

@@ -77,19 +77,6 @@ def render(st):
 
     text15("Konfiguration")
 
-    # Knopf "Neue Runde"
-    if st.button("Neue Runde"):
-        try:
-            players = json.loads(st.session_state.konf_players)
-            #print(players)
-            if not isinstance(players, list):
-                raise ValueError("Spieler muss eine JSON-Liste sein.")
-        except Exception as e:
-            st.session_state.konf_output = f"Fehler: Ungültiges Spieler-Format: {e}"
-        else:
-            result = neue_runde_main(players)
-            st.session_state.konf_output = result
-
     # Eingabefeld "Spieler"
     # Prefill explicitly with session value or default
     st.text_input(
@@ -97,6 +84,31 @@ def render(st):
         value=st.session_state.get("konf_players", DEFAULT_PLAYERS_STR),
         key="konf_players",
     )
+
+    # Dynamische Flight-Eingaben unter Neue Runde
+    flight_values = {}
+    try:
+        _player_list = json.loads(st.session_state.konf_players)
+        if isinstance(_player_list, list):
+            st.markdown("**Flights (optional)**")
+            cols = st.columns(min(7, max(1, len(_player_list))))
+            for idx, pname in enumerate(_player_list):
+                col = cols[idx % len(cols)]
+                flight_values[pname] = col.text_input(f"{pname}", key=f"flight_{pname}")
+    except Exception:
+        _player_list = []
+
+    # Knopf "Neue Runde"
+    if st.button("Neue Runde"):
+        try:
+            players = json.loads(st.session_state.konf_players)
+            if not isinstance(players, list):
+                raise ValueError("Spieler muss eine JSON-Liste sein.")
+        except Exception as e:
+            st.session_state.konf_output = f"Fehler: Ungültiges Spieler-Format: {e}"
+        else:
+            result = neue_runde_main(players, flights=flight_values)
+            st.session_state.konf_output = result
 
     # Option: Preprocess vor Upload
     st.checkbox("Bild vor Upload vorverarbeiten (empfohlen)", key="konf_preprocess", value=st.session_state.get("konf_preprocess", True))
