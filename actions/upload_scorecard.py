@@ -1,31 +1,29 @@
-
 from openai import OpenAI
 import json
 from datetime import date, datetime
 from functions import upload_image_for_vision, query_vision_model, copy_scorecard_to_golf_df
 from preprocess_pic import preprocess
 
-def main(image_path: str | None = None) -> str:
-    """Verarbeitet Upload-Referenz (File-ID). Platzhalter-Logik."""
+def main(image_path: str | None = None, pre_process: bool = True) -> str:
+    """Verarbeitet Upload-Referenz (File-ID).
+    pre_process steuert, ob das Bild vor dem Upload vorverarbeitet wird.
+    """
     if not image_path:
         return "Keine File-ID übergeben."
-    
 
-    # Preprocess image
-    # out_path = Path(image_path).with_stem(Path(image_path).stem + "_proc").with_suffix(".png")
-    out_path = f"prep_{image_path}"
-    preprocess(image_path, out_path)
+    # Preprocess image (optional)
+    if pre_process:
+        out_path = f"prep_{image_path}"
+        preprocess(image_path, out_path)
+        image_to_use = out_path
+    else:
+        image_to_use = image_path
 
-    # image_path = out_path
-    #######################################################
-    # Disabled to run without AI query
-    image_id = upload_image_for_vision(out_path)
-    #######################################################
-    
+    # Disable AI query switch kept, but we always upload the image_to_use
+    image_id = upload_image_for_vision(image_to_use)
+
     # Set model type
     gpt_model = "gpt-5-mini"  # Vision-capable model
-
-    # image_id = "file-8mmR171eCLG3PjorUVjMgD"
 
     # Prepare prompt for Vision API
     prompt = (
@@ -47,12 +45,8 @@ def main(image_path: str | None = None) -> str:
     today = date.today()
     date_key = today.strftime("%d.%m.%Y")
 
-    #######################################
-    ## code to run without ai query
-    #scorecard_path = f"json/golf_df/ai_result_29.09.2025 23_19_18.json"
-    success = query_vision_model(image_id, scorecard_path, gpt_model , prompt)
-    #success = True
+    # Run vision query and copy into the day json
+    success = query_vision_model(image_id, scorecard_path, gpt_model, prompt)
     copy_scorecard_to_golf_df(scorecard_path, day_path)
-    #######################################
-    
+
     return success

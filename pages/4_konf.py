@@ -24,6 +24,12 @@ def _init_state():
             "Par": [4,4,5,3,4,5],
             "Hcp": [9,7,11,15,13,17]
         })
+    # Track uploads to avoid re-processing on every rerun
+    if "konf_uploaded_name" not in st.session_state:
+        st.session_state.konf_uploaded_name = ""
+    if "konf_preprocess" not in st.session_state:
+        st.session_state.konf_preprocess = True
+
 
 def render(st):
     # Global CSS for 15px font across common text elements and labels/buttons
@@ -92,16 +98,26 @@ def render(st):
         key="konf_players",
     )
 
+    # Option: Preprocess vor Upload
+    st.checkbox("Bild vor Upload vorverarbeiten (empfohlen)", key="konf_preprocess", value=st.session_state.get("konf_preprocess", True))
+
     # Knopf "Upload Scorecard" mit Dateiupload
-    uploaded_file = st.file_uploader("Scorecard Datei auswählen", type=["jpg", "jpeg", "png"])
+    uploaded_file = st.file_uploader("Scorecard Datei auswählen", type=["jpg", "jpeg", "png"], key="konf_uploader")
     if uploaded_file is not None:
-        file_path = f"{uploaded_file.name}"
-        with open(file_path, "wb") as f:
-            f.write(uploaded_file.getbuffer())
-        result = upload_scorecard_main(file_path)
-        st.session_state.konf_output = result
-        st.session_state.konf_file_id = result  # Store returned file_id
-        print("uploaded file is not none")
+        # Only process once per filename to avoid re-running on every rerun
+        if st.session_state.konf_uploaded_name != uploaded_file.name:
+            file_path = f"{uploaded_file.name}"
+            with open(file_path, "wb") as f:
+                f.write(uploaded_file.getbuffer())
+            # Pass user choice for preprocessing
+            result = upload_scorecard_main(file_path, pre_process=st.session_state.get("konf_preprocess", True))
+            st.session_state.konf_output = result
+            st.session_state.konf_file_id = result  # Store returned file_id
+            st.session_state.konf_uploaded_name = uploaded_file.name
+            print("uploaded file processed once")
+        else:
+            # Skip re-processing; file already handled
+            pass
 
     # Editierbare Tabelle für Par, Hcp und Scores aller Spieler
     with open("json/golf_df/golf_df.json", "r", encoding="utf-8") as f:

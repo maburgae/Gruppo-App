@@ -27,7 +27,7 @@ def make_ranking_table(players: dict, save_path: str | None = None, show: bool =
             pdata.get("Platz", "-"),
             name,
             pdata.get("Netto", 0),
-            pdata.get("Gesp.Hcp", 0),
+            pdata.get("Ge.Hcp", 0),
             pdata.get("Birdies", 0),
             pdata.get("Pars", 0),
             pdata.get("Bogies", 0),
