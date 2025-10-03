@@ -73,14 +73,26 @@ def render(st):
         st.pyplot(fig)
         plt.close(fig)
 
-    # Load data and build year dropdown
+    # Load data and destinations, build year dropdown (newest first) with destination labels
     data = load_allrounds()
+    try:
+        with open("json/Destinations.json", "r", encoding="utf-8") as f:
+            destinations = json.load(f)
+    except Exception:
+        destinations = {}
+
     years = years_with_par(data)
     if not years:
         st.info("Keine Jahre mit Par-Daten gefunden.")
         return
 
-    year = st.selectbox("Jahr wählen", years, index=len(years) - 1)
+    year_options = sorted(years, reverse=True)
+
+    def fmt_year(y: int) -> str:
+        dest = destinations.get(str(y))
+        return f"{y} - {dest}" if dest else str(y)
+
+    year = st.selectbox("Jahr wählen", year_options, index=0, format_func=fmt_year)
 
     # Filter rounds of selected year (and with Par not None)
     rounds_for_year = []  # list of (date_str, obj)
@@ -238,7 +250,7 @@ def render(st):
                 colors.append(color_map.get(p))
         if not any(colors):
             colors = None
-        fig, ax = plt.subplots(figsize=(8, 8))
+        fig, ax = plt.subplots(figsize=(6, 6))
         def fmt_euro(pct):
             abs_val = pct * sum(sizes) / 100.0
             return f"€{int(round(abs_val))}"
@@ -250,10 +262,10 @@ def render(st):
             startangle=90,
             counterclock=False,
             wedgeprops=dict(linewidth=1, edgecolor='white'),
-            textprops=dict(fontsize=15)  # set label and autopct font sizes to 15
+            textprops=dict(fontsize=18)  # doubled font size for labels and autopct
         )
         # total in center
-        ax.text(0, 0, f"Gesamt\n€{int(round(total_geld))}", ha='center', va='center', fontsize=15, fontweight='bold')
+        ax.text(0, 0, f"Gesamt\n€{int(round(total_geld))}", ha='center', va='center', fontsize=30, fontweight='bold')
         ax.axis('equal')
         fig.tight_layout()
         st.pyplot(fig)

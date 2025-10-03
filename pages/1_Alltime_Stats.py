@@ -440,11 +440,11 @@ def render(st):
             startangle=90,
             counterclock=False,
             wedgeprops=dict(linewidth=1, edgecolor='white'),
-            textprops=dict(fontsize=15)  # Ensure all pie texts (labels + autopct) are 15
+            textprops=dict(fontsize=18)  # doubled font size for labels and autopct
         )
         # Add total sum in the center of the pie
         total_label = f"Gesamt\n€{int(round(total_geld))}"
-        ax.text(0, 0, total_label, ha='center', va='center', fontsize=15, fontweight='bold')
+        ax.text(0, 0, total_label, ha='center', va='center', fontsize=30, fontweight='bold')
         ax.axis('equal')
         fig.tight_layout()
         st.pyplot(fig)
