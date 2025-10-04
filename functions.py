@@ -21,13 +21,26 @@ def get_openai_client():
 def upload_image_for_vision(image_path: str) -> str:
     """
     Uploads an image to OpenAI Vision API and returns the image id.
+    Normalisiert vor dem Upload die Dateiendung auf Kleinbuchstaben, da der
+    OpenAI-Endpunkt Großbuchstaben (z.B. .JPG) ablehnen kann.
     Args:
         image_path (str): Path to the image file.
     Returns:
         str: The image id assigned by OpenAI.
     """
+    # Extension normalisieren
+    base, ext = os.path.splitext(image_path)
+    if ext and ext.lower() in [".jpeg", ".jpg", ".png", ".gif", ".webp"] and ext != ext.lower():
+        normalized_path = base + ext.lower()
+        try:
+            shutil.copy2(image_path, normalized_path)
+            image_path = normalized_path
+        except Exception as e:
+            print(f"Warnung: Konnte Datei nicht kopieren für Kleinbuchstaben-Endung: {e}")
+
     client = get_openai_client()
     with open(image_path, "rb") as file_content:
+        # Dateiname wird automatisch aus dem Pfad übernommen – keine manuelle Zuweisung nötig
         image = client.files.create(
             file=file_content,
             purpose="vision",

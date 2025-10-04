@@ -69,21 +69,34 @@ def make_ranking_table(players: dict, save_path: str | None = None, show: bool =
 
 
 def main():
-    json_file = "json/allrounds.json"
-    #json_file = "json/golf_df/golf_df.json"
-    #date_key = "30.09.2025"  # gewünschtes Datum
+    #json_file = "json/allrounds.json"
+    json_file = "json/golf_df/golf_df.json"
+    # Erwartung: genau ein Datumsschlüssel in golf_df.json
+    try:
+        with open(json_file, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+    except FileNotFoundError:
+        return f"Fehler: Datei {json_file} nicht gefunden"
+    except json.JSONDecodeError as e:
+        return f"Fehler: Ungültiges JSON ({e})"
 
-    # Load JSON data from a file
-    with open(json_file, 'r') as file:
-        data = json.load(file)  # Parse the JSON file into a Python dictionary
+    if not isinstance(data, dict) or len(data) == 0:
+        return "Fehler: JSON hat keinen gültigen Inhalt"
 
-    # Loop over all the first-level keys
-    for key in data.keys():
-        print(f"Key: {key}")
-        players = load_round(json_file, key)
-        make_ranking_table(players, save_path=f"rankings/{key}.png", show=False)   
-        show_scorecard(json_file, key, save_path=f"scorecards/{key}.png", show=False)
+    keys = list(data.keys())
+    if len(keys) != 1:
+        return f"Fehler: Erwartet genau einen Schlüssel, gefunden {len(keys)}: {keys}"
+
+    date_key = keys[0]
+    try:
+        players = load_round(json_file, date_key)
+    except Exception as e:
+        return f"Fehler beim Laden der Runde: {e}"
+
+    make_ranking_table(players, save_path=f"rankings/{date_key}.png", show=False)
+    show_scorecard(json_file, date_key, save_path=f"scorecards/{date_key}.png", show=False)
     return "Stats generated!"
+
 if __name__ == "__main__":
     main()
 

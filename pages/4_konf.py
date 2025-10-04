@@ -87,6 +87,17 @@ def render(st):
 
     # Dynamische Flight-Eingaben unter Neue Runde
     flight_values = {}
+    existing_flights = {}
+    try:
+        with open("json/golf_df/golf_df.json", "r", encoding="utf-8") as _gf:
+            _golf_existing = json.load(_gf)
+        if isinstance(_golf_existing, dict) and len(_golf_existing) > 0:
+            _date_key_exist = next(iter(_golf_existing.keys()))
+            _round_exist = _golf_existing[_date_key_exist]
+            for _p, _pdata in _round_exist.get("Spieler", {}).items():
+                existing_flights[_p] = _pdata.get("Flight")
+    except Exception:
+        pass
     try:
         _player_list = json.loads(st.session_state.konf_players)
         if isinstance(_player_list, list):
@@ -94,7 +105,11 @@ def render(st):
             cols = st.columns(min(7, max(1, len(_player_list))))
             for idx, pname in enumerate(_player_list):
                 col = cols[idx % len(cols)]
-                flight_values[pname] = col.text_input(f"{pname}", key=f"flight_{pname}")
+                state_key = f"flight_{pname}"
+                if state_key not in st.session_state:
+                    existing_val = existing_flights.get(pname)
+                    st.session_state[state_key] = "" if existing_val in (None, "None") else str(existing_val)
+                flight_values[pname] = col.text_input(f"{pname}", key=state_key)
     except Exception:
         _player_list = []
 
@@ -274,6 +289,20 @@ def render(st):
     if st.button("Erzeuge Stats"):
         result = erzeuge_stats_main()
         st.session_state.konf_output = result
+
+    # Download golf_df.json
+    try:
+        with open("json/golf_df/golf_df.json", "r", encoding="utf-8") as f:
+            _golfdf = f.read()
+        st.download_button(
+            label="Download golf_df.json",
+            data=_golfdf,
+            file_name="golf_df.json",
+            mime="application/json",
+            key="download_golf_df_json",
+        )
+    except Exception:
+        pass
 
     # Download allrounds.json
     try:
