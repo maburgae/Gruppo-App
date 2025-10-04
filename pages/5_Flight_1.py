@@ -7,6 +7,17 @@ def render(st):
         """
         <style>
         html, body, p, span, div, label, .stButton > button {font-size:15px !important;}
+        /* Rote Buttons */
+        div.stButton > button {
+            background-color: #c00000 !important;
+            color: #ffffff !important;
+            border: 1px solid #900000 !important;
+        }
+        div.stButton > button:hover {
+            background-color: #ff1a1a !important;
+            border-color: #b00000 !important;
+            color:#ffffff !important;
+        }
         </style>
         """,
         unsafe_allow_html=True,
@@ -56,6 +67,8 @@ def render(st):
         hide_index=False,
         width='stretch'
     )
+    # Speichern-Button direkt unter der Score-Tabelle platzieren
+    save_clicked = st.button("Speichern", key="flight1_save")
 
     # 2) Ladiestabelle (alle Spieler der Runde) + LD/N2TP rechts daneben
     ladies_rows = [{"Spieler": name, "Ladies": pdata.get("Ladies")} for name, pdata in spieler.items()]
@@ -114,7 +127,8 @@ def render(st):
             key="flight1_n2tp_select"
         )
 
-    if st.button("Speichern", key="flight1_save"):
+    # Speichern-Logik jetzt hier (nachdem alle Widgets definiert wurden)
+    if save_clicked:
         try:
             with open(json_path, "r", encoding="utf-8") as f:
                 current_data = json.load(f)
@@ -136,7 +150,6 @@ def render(st):
                                 new_scores.append(None)
                     rd["Spieler"][pname]["Score"] = new_scores
             # Ladies aktualisieren (alle Spieler)
-            # Durch Zeilen mit Spieler-Spalte iterieren
             for _, row in ladies_edited.iterrows():
                 pname = row.get("Spieler")
                 if pname in rd["Spieler"].keys():

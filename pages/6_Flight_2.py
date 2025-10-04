@@ -7,6 +7,16 @@ def render(st):
         """
         <style>
         html, body, p, span, div, label, .stButton > button {font-size:15px !important;}
+        div.stButton > button {
+            background-color: #c00000 !important;
+            color: #ffffff !important;
+            border: 1px solid #900000 !important;
+        }
+        div.stButton > button:hover {
+            background-color: #ff1a1a !important;
+            border-color: #b00000 !important;
+            color:#ffffff !important;
+        }
         </style>
         """,
         unsafe_allow_html=True,
@@ -56,6 +66,7 @@ def render(st):
         hide_index=False,
         width='stretch'
     )
+    save_clicked = st.button("Speichern", key="flight2_save")
 
     # 2) Ladiestabelle (alle Spieler der Runde) + LD/N2TP rechts daneben
     ladies_rows = [{"Spieler": name, "Ladies": pdata.get("Ladies")} for name, pdata in spieler.items()]
@@ -113,7 +124,7 @@ def render(st):
             key="flight2_n2tp_select"
         )
 
-    if st.button("Speichern", key="flight2_save"):
+    if save_clicked:
         try:
             with open(json_path, "r", encoding="utf-8") as f:
                 current_data = json.load(f)
