@@ -77,13 +77,35 @@ def render(st):
 
     text15("Konfiguration")
 
+    # Vorab vorhandenen Ort laden (falls vorhanden) um Platzname vorzubelegen
+    existing_ort = ""
+    try:
+        with open("json/golf_df/golf_df.json", "r", encoding="utf-8") as _f_ort:
+            _gdf_tmp = json.load(_f_ort)
+        if isinstance(_gdf_tmp, dict) and len(_gdf_tmp) > 0:
+            _dk = next(iter(_gdf_tmp.keys()))
+            existing_ort = _gdf_tmp[_dk].get("Ort", "") or ""
+    except Exception:
+        pass
+
+    if not st.session_state.get("konf_platzname_val"):
+        if existing_ort:
+            st.session_state["konf_platzname_val"] = existing_ort
+            st.session_state["konf_platzname"] = existing_ort
+
     # Eingabefeld "Spieler"
-    # Prefill explicitly with session value or default
     st.text_input(
         "Spieler (JSON-Liste)",
         value=st.session_state.get("konf_players", DEFAULT_PLAYERS_STR),
         key="konf_players",
     )
+    # Eingabefeld Platzname (voreingestellt mit vorhandenem Ort)
+    platzname = st.text_input(
+        "Platzname",
+        key="konf_platzname",
+        value=st.session_state.get("konf_platzname_val", existing_ort)
+    )
+    st.session_state["konf_platzname_val"] = platzname
 
     # Dynamische Flight-Eingaben unter Neue Runde
     flight_values = {}
@@ -122,7 +144,7 @@ def render(st):
         except Exception as e:
             st.session_state.konf_output = f"Fehler: Ungültiges Spieler-Format: {e}"
         else:
-            result = neue_runde_main(players, flights=flight_values)
+            result = neue_runde_main(players, flights=flight_values, ort=platzname.strip())
             st.session_state.konf_output = result
 
     # Option: Preprocess vor Upload
@@ -210,7 +232,7 @@ def render(st):
         # Only process player rows (skip Par/Hcp)
         for idx in range(2, edited_df.shape[0]):
             row = edited_df.iloc[idx]
-            player = str(row.iloc[0]).strip()  # already just the player name (no 'Score ' prefix)
+            player = str(row.iloc[0]).strip()
             scores = [nan_to_null_int(row.iloc[i]) for i in range(1, 19)]
             ld = nan_to_null_int(row.iloc[19])
             n2tp = nan_to_null_int(row.iloc[20])
@@ -225,6 +247,10 @@ def render(st):
         data = golf_data[key]
         data["Par"] = new_par
         data["Hcp"] = new_hcp
+        # Ort aktualisieren falls Eingabe vorhanden
+        _platz_eingabe = st.session_state.get("konf_platzname", "").strip()
+        if _platz_eingabe:
+            data["Ort"] = _platz_eingabe
         for player in data["Spieler"]:
             if player in new_scores:
                 data["Spieler"][player]["Score"] = new_scores[player]
@@ -237,7 +263,7 @@ def render(st):
         with open("json/golf_df/golf_df.json", "w", encoding="utf-8") as f:
             json.dump(golf_data, f, ensure_ascii=False, indent=2)
         st.session_state["golf_df_dirty"] = False
-        st.success("Tabelle erfolgreich gespeichert!")
+        st.success("Tabelle erfolgreich gespeichert (inkl. Ort)!")
 
     # Separate heavy computation button
     if st.button("Berechne den Tag"):
