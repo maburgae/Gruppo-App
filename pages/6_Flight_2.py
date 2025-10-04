@@ -43,6 +43,10 @@ def render(st):
     round_data = golf_data[date_key]
     spieler = round_data.get("Spieler", {})
 
+    # Zeige gespeicherte Rückmeldung (oben)
+    if st.session_state.get("flight2_save_msg"):
+        st.success(st.session_state.get("flight2_save_msg"))
+
     # Filter Spieler fuer Flight 2
     flight_players = {name: pdata for name, pdata in spieler.items() if str(pdata.get("Flight")) == "2"}
     if not flight_players:
@@ -130,6 +134,7 @@ def render(st):
                 current_data = json.load(f)
             dkey = next(iter(current_data.keys()))
             rd = current_data[dkey]
+            saved_lines = [f"Gespeicherte Scores (Datum {dkey}, Flight 2):"]
             # Scores aktualisieren (nur Flight 2)
             for pname in flight_players.keys():
                 if pname in edited.index:
@@ -145,6 +150,8 @@ def render(st):
                             except (ValueError, TypeError):
                                 new_scores.append(None)
                     rd["Spieler"][pname]["Score"] = new_scores
+                    pretty = ", ".join(str(v) if v is not None else "-" for v in new_scores)
+                    saved_lines.append(f"{pname}: {pretty}")
             # Ladies aktualisieren (alle Spieler)
             for _, row in ladies_edited.iterrows():
                 pname = row.get("Spieler")
@@ -173,7 +180,8 @@ def render(st):
                     rd["Spieler"][pname]["N2TP"] = 1 if pname == n2tp_selection else None
             with open(json_path, "w", encoding="utf-8") as f:
                 json.dump(current_data, f, ensure_ascii=False, indent=2)
-            st.success("Scores, Ladies und Sonderwertungen für Flight 2 gespeichert.")
+            st.session_state["flight2_save_msg"] = "\n".join(saved_lines)
+            st.rerun()
         except Exception as e:
             st.error(f"Fehler beim Speichern: {e}")
 

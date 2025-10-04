@@ -1,45 +1,45 @@
 {
-  "05.10.2025": {
-    "Ort": "Maijas",
+  "04.10.2025": {
+    "Ort": "Cabopino",
     "Par": [
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null
+      5,
+      4,
+      3,
+      4,
+      4,
+      5,
+      4,
+      4,
+      3,
+      4,
+      3,
+      5,
+      3,
+      5,
+      4,
+      4,
+      4,
+      4
     ],
     "Hcp": [
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null
+      8,
+      6,
+      18,
+      10,
+      14,
+      4,
+      12,
+      2,
+      16,
+      3,
+      15,
+      5,
+      17,
+      7,
+      11,
+      1,
+      9,
+      13
     ],
     "Spieler": {
       "Marc": {
@@ -220,7 +220,7 @@
         "Ladies": null,
         "N2TP": null,
         "LD": null,
-        "Flight": "1",
+        "Flight": "2",
         "Score": [
           null,
           null,
@@ -330,7 +330,7 @@
         "Ladies": null,
         "N2TP": null,
         "LD": null,
-        "Flight": "2",
+        "Flight": "1",
         "Score": [
           null,
           null,
@@ -427,6 +427,26 @@
           null
         ]
       }
-    }
+    },
+    "Hole": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18
+    ]
   }
 }

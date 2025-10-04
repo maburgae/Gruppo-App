@@ -260,10 +260,16 @@ def render(st):
                 data["Spieler"][player]["N2TP"] = new_n2tp[player]
             if player in new_ladies:
                 data["Spieler"][player]["Ladies"] = new_ladies[player]
+            # Flight Werte aus den Eingabefeldern übernehmen
+            flight_state_key = f"flight_{player}"
+            flight_val = st.session_state.get(flight_state_key, "")
+            if isinstance(flight_val, str):
+                flight_val = flight_val.strip()
+            data["Spieler"][player]["Flight"] = flight_val if flight_val else None
         with open("json/golf_df/golf_df.json", "w", encoding="utf-8") as f:
             json.dump(golf_data, f, ensure_ascii=False, indent=2)
         st.session_state["golf_df_dirty"] = False
-        st.success("Tabelle erfolgreich gespeichert (inkl. Ort)!")
+        st.success("Tabelle erfolgreich gespeichert (inkl. Ort & Flight)!")
 
     # Separate heavy computation button
     if st.button("Berechne den Tag"):
