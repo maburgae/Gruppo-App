@@ -274,52 +274,55 @@ def render(st):
     # 6) Ranglisten und Scorecards (nur Runden des gewählten Jahres)
     import os
     from PIL import Image
-    text15("Ranglisten und Scorecards (Jahr)")
-    directory1 = "rankings/"
-    directory2 = "scorecards/"
-
-    # Show in reverse chronological order like Runden page
-    for d, obj in sorted(rounds_for_year, key=lambda kv: datetime.strptime(kv[0], "%d.%m.%Y"), reverse=True):
+    # Alte kombinierte Darstellung ersetzt durch zwei Blöcke
+    text15("Ranglisten (Jahr)")
+    directory_rank = "rankings/"
+    directory_sc = "scorecards/"
+    rounds_rev = sorted(rounds_for_year, key=lambda kv: datetime.strptime(kv[0], "%d.%m.%Y"), reverse=True)
+    # Erst alle Rankings
+    for d, obj in rounds_rev:
         ort = obj.get("Ort", "")
         display_name = f"{d} ({ort})" if ort else d
         st.markdown(f"<b style='font-size:15px'>{display_name}</b>", unsafe_allow_html=True)
-
-        # Ranking image
-        rank_path = os.path.join(directory1, f"{d}.png")
+        rank_path = os.path.join(directory_rank, f"{d}.png")
         if os.path.exists(rank_path):
             try:
                 image_rank = Image.open(rank_path)
                 st.image(image_rank, width='stretch')
             except Exception:
                 pass
-
-        # Scorecards: prefer split images; fallback to single
-        front_path = os.path.join(directory2, f"{d}_front.png")
-        back_path = os.path.join(directory2, f"{d}_back.png")
-        single_path = os.path.join(directory2, f"{d}.png")
-
+        else:
+            st.caption("(Kein Ranking-Bild gefunden)")
+    # Dann alle Scorecards
+    text15("Scorecards (Jahr)")
+    for d, obj in rounds_rev:
+        ort = obj.get("Ort", "")
+        display_name = f"{d} ({ort})" if ort else d
+        st.markdown(f"<b style='font-size:15px'>{display_name}</b>", unsafe_allow_html=True)
+        front_path = os.path.join(directory_sc, f"{d}_front.png")
+        back_path = os.path.join(directory_sc, f"{d}_back.png")
+        single_path = os.path.join(directory_sc, f"{d}.png")
         shown_any = False
         if os.path.exists(front_path):
             try:
-                image_front = Image.open(front_path)
-                st.image(image_front, width='stretch')
+                st.image(Image.open(front_path), width='stretch')
                 shown_any = True
             except Exception:
                 pass
         if os.path.exists(back_path):
             try:
-                image_back = Image.open(back_path)
-                st.image(image_back, width='stretch')
+                st.image(Image.open(back_path), width='stretch')
                 shown_any = True
             except Exception:
                 pass
-        if not shown_any and os.path.exists(single_path):
+        if (not shown_any) and os.path.exists(single_path):
             try:
-                image_single = Image.open(single_path)
-                st.image(image_single, width='stretch')
+                st.image(Image.open(single_path), width='stretch')
+                shown_any = True
             except Exception:
                 pass
-
+        if not shown_any:
+            st.caption("(Keine Scorecard-Bilder gefunden)")
 
 if __name__ == "__main__":
     import streamlit as st

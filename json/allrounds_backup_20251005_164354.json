@@ -39101,7 +39101,7 @@
         ]
       },
       "Heiko": {
-        "Geld": 50
+        "Geld": 60
       }
     },
     "Hole": [
@@ -39126,7 +39126,7 @@
     ]
   },
   "05.10.2025": {
-    "Ort": "Maijas",
+    "Ort": "Mijas",
     "Par": [
       5,
       3,
@@ -39226,7 +39226,7 @@
       "Andy": {
         "Platz": 4,
         "Netto": 34,
-        "Geld": 20,
+        "Geld": 10,
         "Gesp.Hcp": 36,
         "Birdies": 0,
         "Pars": 0,
@@ -39281,7 +39281,7 @@
       "Bernie": {
         "Platz": 5,
         "Netto": 33,
-        "Geld": 50,
+        "Geld": 40,
         "Gesp.Hcp": 49,
         "Birdies": 0,
         "Pars": 0,
@@ -39336,7 +39336,7 @@
       "Jens": {
         "Platz": 6,
         "Netto": 30,
-        "Geld": 50,
+        "Geld": 40,
         "Gesp.Hcp": 68,
         "Birdies": 0,
         "Pars": 0,
@@ -39388,10 +39388,65 @@
           2
         ]
       },
+      "Heiko": {
+        "Platz": 7,
+        "Netto": 24,
+        "Geld": 50,
+        "Gesp.Hcp": 42,
+        "Birdies": 0,
+        "Pars": 1,
+        "Bogies": 6,
+        "Strich": 7,
+        "DayHcp": 30,
+        "Ladies": 1,
+        "N2TP": null,
+        "LD": null,
+        "Flight": "2",
+        "Score": [
+          8,
+          4,
+          5,
+          5,
+          8,
+          6,
+          5,
+          4,
+          7,
+          5,
+          3,
+          8,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        "NettoP": [
+          1,
+          2,
+          2,
+          3,
+          1,
+          2,
+          2,
+          3,
+          1,
+          3,
+          4,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      },
       "Markus": {
         "Platz": 3,
         "Netto": 35,
-        "Geld": 10,
+        "Geld": 0,
         "Gesp.Hcp": 27,
         "Birdies": 0,
         "Pars": 3,
@@ -39497,9 +39552,6 @@
           1,
           1
         ]
-      },
-      "Heiko": {
-        "Geld": 60
       }
     },
     "Hole": [

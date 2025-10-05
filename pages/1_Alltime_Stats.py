@@ -254,7 +254,9 @@ def render(st):
             row.append(val)
             col_sums[i] += val
         platz_rows.append(row)
-    # Removed last column 'Summe' per request
+    # Add summary row with total rounds per player (sum of all platz counts)
+    runden_row = ["Runden"] + col_sums
+    platz_rows.append(runden_row)
     display_table(["Platz"] + filtered_players_sorted, platz_rows, "Plätze Übersicht")
 
     # --- Combined Birdies, Pars, Bogies, Strich Table ---
