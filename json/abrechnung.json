@@ -1,0 +1,50 @@
+[
+  {
+    "id": "a6a3951b-b6f0-4318-bd3a-6870deb61589",
+    "timestamp": "2025-10-05 17:46:06",
+    "payer": "Marc",
+    "beneficiaries": [
+      "Andy",
+      "Bernie",
+      "Buffy",
+      "Heiko",
+      "Jens",
+      "Marc",
+      "Markus"
+    ],
+    "amount": 168.0,
+    "description": "Torrequebrada Buggies"
+  },
+  {
+    "id": "23875961-fb36-4706-bb85-1b3620bae6b0",
+    "timestamp": "2025-10-05 17:46:52",
+    "payer": "Heiko",
+    "beneficiaries": [
+      "Andy",
+      "Bernie",
+      "Buffy",
+      "Heiko",
+      "Jens",
+      "Marc",
+      "Markus"
+    ],
+    "amount": 115.0,
+    "description": "Cabopino Resto"
+  },
+  {
+    "id": "e17a9318-91f9-4b0d-b445-c5a91d66c514",
+    "timestamp": "2025-10-05 17:48:21",
+    "payer": "Marc",
+    "beneficiaries": [
+      "Andy",
+      "Bernie",
+      "Buffy",
+      "Heiko",
+      "Jens",
+      "Marc",
+      "Markus"
+    ],
+    "amount": 602.0,
+    "description": "Cabopino GF und Buggies"
+  }
+]
