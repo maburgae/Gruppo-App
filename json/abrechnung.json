@@ -1,50 +1,50 @@
 [
   {
-    "id": "a6a3951b-b6f0-4318-bd3a-6870deb61589",
-    "timestamp": "2025-10-05 17:46:06",
+    "id": "1f5e0d4a-1680-4f8f-a5e9-1",
+    "timestamp": "2025-10-06 00:00:00",
     "payer": "Marc",
-    "beneficiaries": [
-      "Andy",
-      "Bernie",
-      "Buffy",
-      "Heiko",
-      "Jens",
-      "Marc",
-      "Markus"
-    ],
+    "beneficiaries": ["Andy","Bernie","Buffy","Heiko","Jens","Marc","Markus"],
     "amount": 168.0,
     "description": "Torrequebrada Buggies"
   },
   {
-    "id": "23875961-fb36-4706-bb85-1b3620bae6b0",
-    "timestamp": "2025-10-05 17:46:52",
+    "id": "2d4d8c9e-0c52-479b-a2f0-2",
+    "timestamp": "2025-10-06 00:00:00",
     "payer": "Heiko",
-    "beneficiaries": [
-      "Andy",
-      "Bernie",
-      "Buffy",
-      "Heiko",
-      "Jens",
-      "Marc",
-      "Markus"
-    ],
+    "beneficiaries": ["Andy","Bernie","Buffy","Heiko","Jens","Marc","Markus"],
     "amount": 115.0,
     "description": "Cabopino Resto"
   },
   {
-    "id": "e17a9318-91f9-4b0d-b445-c5a91d66c514",
-    "timestamp": "2025-10-05 17:48:21",
+    "id": "3bb9f6fd-b1f0-4af6-8d55-3",
+    "timestamp": "2025-10-06 00:00:00",
     "payer": "Marc",
-    "beneficiaries": [
-      "Andy",
-      "Bernie",
-      "Buffy",
-      "Heiko",
-      "Jens",
-      "Marc",
-      "Markus"
-    ],
+    "beneficiaries": ["Andy","Bernie","Buffy","Heiko","Jens","Marc","Markus"],
     "amount": 602.0,
     "description": "Cabopino GF und Buggies"
+  },
+  {
+    "id": "4c1a7c2e-5af1-4421-96fb-4",
+    "timestamp": "2025-10-06 00:00:00",
+    "payer": "Bernie",
+    "beneficiaries": ["Andy","Bernie","Buffy","Heiko","Jens","Marc","Markus"],
+    "amount": 75.0,
+    "description": "Bälle"
+  },
+  {
+    "id": "5e6d2ab0-9b7d-4e51-8c40-5",
+    "timestamp": "2025-10-06 00:00:00",
+    "payer": "Bernie",
+    "beneficiaries": ["Andy","Bernie","Buffy","Heiko","Jens","Marc","Markus"],
+    "amount": 119.0,
+    "description": "Hütte Trinkgeld+Wasser"
+  },
+  {
+    "id": "6fa2c1e3-d058-4c9b-b6de-6",
+    "timestamp": "2025-10-06 00:00:00",
+    "payer": "Marc",
+    "beneficiaries": ["Bernie","Buffy","Heiko","Jens","Marc","Markus"],
+    "amount": 255.0,
+    "description": "Resto La Cala"
   }
 ]
