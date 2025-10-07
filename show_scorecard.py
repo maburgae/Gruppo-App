@@ -28,32 +28,43 @@ def show_scorecard(json_file: str, date_key: str, save_path=None, show=True):
     # build table data
     row_labels = ["Hole", "Par", "Hcp"]
     rows = []
-    rows.append([str(h) for h in holes])
-    rows.append([str(p) if p is not None else "" for p in pars])
-    rows.append([str(h) if h is not None else "" for h in hcps])
+    rows.append([str(h) for h in holes])          # Hole numbers
+    rows.append([str(p) if p is not None else "" for p in pars])  # Par
+    rows.append([str(h) if h is not None else "" for h in hcps])  # Hcp
+
+    # Separator row after Hcp for visual separation (blank label handled later)
+    rows.append(["" for _ in range(18)])
+    row_labels.append("")
+
+    # Helper to decide if player has any score
+    def _has_score(pdata):
+        sc = pdata.get("Score", []) or []
+        if not sc:
+            return False
+        for v in sc:
+            if isinstance(v, (int, float)):
+                return True
+        return False
+
+    # Build player rows (Score + Netto) and insert separator rows
     for pname, pdata in players.items():
+        if not _has_score(pdata):
+            continue  # skip players without any score values
         # Scores row
-        scores = []
-        score_list = pdata.get("Score", [])
-        score_list = list(score_list) + [None] * (18 - len(score_list))
-        for sc in score_list:
-            if sc is None:
-                scores.append("x")
-            else:
-                scores.append(str(sc))
+        score_list = list(pdata.get("Score", []) or [])
+        score_list = score_list + [None] * (18 - len(score_list))
+        scores = [ ("x" if sc is None else str(sc)) for sc in score_list ]
         rows.append(scores)
         row_labels.append(pname if pdata.get("DayHcp", "") == "" else f"{pname} ({pdata['DayHcp']})")
-        # NettoP row
-        nettopoints = []
-        np_list = pdata.get("NettoP", [])
-        np_list = list(np_list) + [None] * (18 - len(np_list))
-        for np in np_list:
-            if np is None:
-                nettopoints.append("")
-            else:
-                nettopoints.append(str(np))
+        # Netto row (label only 'Netto')
+        np_list = list(pdata.get("NettoP", []) or [])
+        np_list = np_list + [None] * (18 - len(np_list))
+        nettopoints = [ ("" if np is None else str(np)) for np in np_list ]
         rows.append(nettopoints)
-        row_labels.append(f"{pname} NettoP")
+        row_labels.append("Netto")
+        # Separator row (blank) for visual spacing
+        rows.append(["" for _ in range(18)])
+        row_labels.append("")  # marker for separator
 
     # Ensure all rows are exactly 18 columns
     for i in range(len(rows)):
@@ -65,16 +76,30 @@ def show_scorecard(json_file: str, date_key: str, save_path=None, show=True):
     col_labels = [""] + [str(h) for h in holes]
     cell_data = [[label] + row for label, row in zip(row_labels, rows)]
 
-    # Helper to render a half (start inclusive, end exclusive) of the scorecard
+    # Helper to render a half (start inclusive, end exclusive) of the scorecard with extra Net column
     def render_half(start_idx: int, end_idx: int, out_path: str | None, date_key: str):
-        local_cols = end_idx - start_idx
-        # Slice each row to the requested hole range
-        cell_data_half = [[label] + row[start_idx:end_idx] for label, row in zip(row_labels, rows)]
+        hole_count = end_idx - start_idx  # 9
+        # Build sliced data + additional Net column (sum of Netto row for that half)
+        cell_data_half = []
+        for label, full_row in zip(row_labels, rows):
+            slice_part = full_row[start_idx:end_idx]
+            # Determine extra cell content
+            extra = ""
+            if label == "Netto":
+                # Sum numeric entries in slice_part
+                s = 0
+                for v in slice_part:
+                    try:
+                        if v != "":
+                            s += int(v)
+                    except Exception:
+                        pass
+                extra = str(s)
+            cell_data_half.append([label] + slice_part + [extra])
 
+        # Figure with +1 extra column
         fig, ax = plt.subplots(figsize=(20, 15))
         ax.axis("off")
-
-        # Remove extra whitespace around the table
         try:
             fig.tight_layout(pad=0)
         except Exception:
@@ -83,44 +108,55 @@ def show_scorecard(json_file: str, date_key: str, save_path=None, show=True):
         ax.set_position([0, 0, 1, 1])
 
         table = ax.table(cellText=cell_data_half, cellLoc="center", loc="center")
-
         table.auto_set_font_size(False)
         table.set_fontsize(40)
         table.scale(1.0, 4.5)
 
-        # Reduce internal cell padding
+        # Reduce padding
         for cell in table.get_celld().values():
             try:
                 cell.set_pad(0.01)
             except Exception:
                 pass
 
-        # Make the first column wider
+        # Adjust first column width
+        n_rows_local = len(cell_data_half)
+        n_cols_local = hole_count + 2  # label + holes + Net column
         for key, cell in table.get_celld().items():
-            if key[1] == 0:
-                cell.set_width(0.20)  # a bit wider for label column
+            r, c = key
+            if c == 0:
+                cell.set_width(0.20)
 
-        # Make Par values bold (row index 1)
-        for col_idx in range(1, local_cols + 1):
-            cell = table[(1, col_idx)]
-            cell.set_text_props(weight='bold')
+        # Bold Par row (row index 1, after headers row 0=Hole labels). Our first three labels are Hole/Par/Hcp.
+        # Par row is index 1 in cell_data_half
+        for col_idx in range(1, hole_count + 1):
+            try:
+                table[(1, col_idx)].set_text_props(weight='bold')
+            except Exception:
+                pass
 
-        # Coloring scores and nettopoints
-        for row_idx, pname in enumerate(row_labels):
-            if pname in ("Hole", "Par", "Hcp"):
+        # Coloring holes (exclude last Net column)
+        for row_idx, label in enumerate(row_labels):
+            if row_idx >= n_rows_local:
+                break
+            if label in ("Hole", "Par", "Hcp", ""):
                 continue
-            # Scores row
-            if not pname.endswith("NettoP"):
-                p_base = pname.split(" (", 1)[0]
+            # Separator row (empty label)
+            if label == "":
+                continue
+            # Scores row (not Netto and not blank)
+            if label not in ("Netto") and not label.endswith("Netto") and label not in ("Hole", "Par", "Hcp"):
+                # Associated player base name
+                p_base = label.split(" (", 1)[0]
                 scores = players.get(p_base, {}).get("Score", [])
-                for off in range(local_cols):
+                for off in range(hole_count):
                     global_hole = start_idx + off
                     try:
                         cell = table[(row_idx, off + 1)]
                     except KeyError:
                         continue
-                    sc = scores[global_hole] if global_hole < len(scores) else None
                     par = pars[global_hole] if global_hole < len(pars) else None
+                    sc = scores[global_hole] if global_hole < len(scores) else None
                     if sc is None or par is None:
                         cell.set_facecolor("red")
                         continue
@@ -128,38 +164,65 @@ def show_scorecard(json_file: str, date_key: str, save_path=None, show=True):
                         cell.set_facecolor("violet")
                     elif sc == par:
                         cell.set_facecolor("lightgreen")
-                    elif sc == par + 1:
-                        pass
                     elif sc == par + 2:
                         cell.set_facecolor("khaki")
-                    else:
+                    elif sc > par + 2:
                         cell.set_facecolor("red")
-            # NettoP row: font color only, no background
-            else:
-                p_base = pname.replace(" NettoP", "")
-                nettopoints = players.get(p_base, {}).get("NettoP", [])
-                for off in range(local_cols):
-                    global_hole = start_idx + off
+            elif label == "Netto":
+                # Netto row styling (text colors only)
+                nettos = table[(row_idx, 1):(row_idx, hole_count)] if False else None  # placeholder not used
+                for off in range(hole_count):
                     try:
                         cell = table[(row_idx, off + 1)]
                     except KeyError:
                         continue
-                    np = nettopoints[global_hole] if global_hole < len(nettopoints) else None
-                    cell.set_facecolor("white")  # No background
-                    text = cell.get_text()
-                    text.set_weight('bold')
-                    if np == 0:
-                        text.set_color("red")
-                    elif np == 1:
-                        text.set_color("yellow")
-                    elif np == 2:
-                        text.set_color("black")
-                    elif isinstance(np, int) and np >= 3:
-                        text.set_color("green")
+                    txt = cell.get_text()
+                    val = txt.get_text().strip()
+                    try:
+                        ival = int(val)
+                    except Exception:
+                        ival = None
+                    cell.set_facecolor("white")
+                    txt.set_weight('bold')
+                    if ival == 0:
+                        txt.set_color("red")
+                    elif ival == 1:
+                        txt.set_color("yellow")
+                    elif ival == 2:
+                        txt.set_color("black")
+                    elif isinstance(ival, int) and ival >= 3:
+                        txt.set_color("green")
                     else:
-                        text.set_color("black")
+                        txt.set_color("black")
+                # Net total column (last one)
+                try:
+                    net_cell = table[(row_idx, hole_count + 1)]
+                    net_cell.get_text().set_weight('bold')
+                except Exception:
+                    pass
 
-        # Save cropped exactly to table
+        # Separator rows: remove borders
+        for r_idx, label in enumerate(row_labels):
+            if label == "":
+                for c in range(n_cols_local):
+                    try:
+                        cell = table[(r_idx, c)]
+                        cell.set_facecolor("white")
+                        cell.set_edgecolor("white")
+                        cell.set_linewidth(0)
+                        cell.get_text().set_text("")
+                    except Exception:
+                        pass
+
+        # Header row adjustments: Add header for Net column (we use 'Net')
+        try:
+            # Hole labels row is index 0; last column = Net header
+            header_net = table[(0, hole_count + 1)]
+            header_net.get_text().set_text("Net")
+            header_net.set_facecolor("lightgray")
+        except Exception:
+            pass
+
         if out_path:
             fig.canvas.draw()
             bbox = table.get_window_extent(renderer=fig.canvas.get_renderer())
