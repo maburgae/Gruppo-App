@@ -392,7 +392,7 @@ def render(st):
     st.markdown("---")
     if st.button("allrounds.json zu GitHub committen (API)"):
         log = []
-        path = "json/allrounds.json"
+        path = "json/golf_df/golf_df.json"
         token = getattr(st, 'secrets', {}).get("GITHUB_TOKEN") if hasattr(st, 'secrets') else None
         repo = (getattr(st, 'secrets', {}).get("REPO") if hasattr(st, 'secrets') else None) or "USER/REPO"
         branch = (getattr(st, 'secrets', {}).get("BRANCH") if hasattr(st, 'secrets') else None) or "main"
@@ -433,7 +433,7 @@ def render(st):
                     st.info("Keine Änderung – Commit übersprungen.")
                 else:
                     from datetime import datetime as _dt
-                    commit_msg = f"Update allrounds.json {_dt.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}"
+                    commit_msg = f"Update golf_df.json {_dt.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}"
                     payload = {"message": commit_msg, "content": local_b64, "branch": branch}
                     if sha:
                         payload["sha"] = sha
