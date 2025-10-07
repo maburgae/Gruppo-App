@@ -1,6 +1,6 @@
 {
-  "05.10.2025": {
-    "Ort": "Maijas",
+  "07.10.2025": {
+    "Ort": "TEes",
     "Par": [
       5,
       3,
@@ -44,14 +44,14 @@
     "Spieler": {
       "Marc": {
         "Platz": 2,
-        "Netto": 38,
+        "Netto": 39,
         "Geld": 0,
-        "Gesp.Hcp": 27,
+        "Gesp.Hcp": 28,
         "Birdies": 0,
         "Pars": 1,
         "Bogies": 11,
-        "Strich": 3,
-        "DayHcp": 29,
+        "Strich": 2,
+        "DayHcp": 31,
         "Ladies": null,
         "N2TP": null,
         "LD": 1,
@@ -83,7 +83,7 @@
           3,
           0,
           3,
-          0,
+          1,
           3,
           3,
           3,
@@ -99,14 +99,14 @@
       },
       "Andy": {
         "Platz": 4,
-        "Netto": 34,
+        "Netto": 35,
         "Geld": 20,
         "Gesp.Hcp": 36,
         "Birdies": 0,
         "Pars": 0,
         "Bogies": 8,
         "Strich": 2,
-        "DayHcp": 34,
+        "DayHcp": 35,
         "Ladies": null,
         "N2TP": 1,
         "LD": null,
@@ -133,7 +133,7 @@
         ],
         "NettoP": [
           2,
-          2,
+          3,
           0,
           0,
           2,
@@ -153,9 +153,9 @@
         ]
       },
       "Bernie": {
-        "Platz": 5,
+        "Platz": 6,
         "Netto": 33,
-        "Geld": 50,
+        "Geld": 60,
         "Gesp.Hcp": 49,
         "Birdies": 0,
         "Pars": 0,
@@ -208,15 +208,15 @@
         ]
       },
       "Jens": {
-        "Platz": 6,
-        "Netto": 30,
-        "Geld": 50,
+        "Platz": 5,
+        "Netto": 34,
+        "Geld": 40,
         "Gesp.Hcp": 68,
         "Birdies": 0,
         "Pars": 0,
         "Bogies": 0,
         "Strich": 4,
-        "DayHcp": 62,
+        "DayHcp": 66,
         "Ladies": 1,
         "N2TP": null,
         "LD": null,
@@ -242,7 +242,7 @@
           7
         ],
         "NettoP": [
-          1,
+          2,
           0,
           2,
           3,
@@ -250,16 +250,16 @@
           0,
           1,
           2,
-          2,
+          3,
           2,
           4,
-          1,
+          2,
           4,
           0,
           2,
           2,
           2,
-          2
+          3
         ]
       },
       "Markus": {

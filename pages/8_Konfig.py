@@ -1,5 +1,8 @@
 import json
 import pandas as pd
+import os
+import base64
+import requests
 
 from actions.neue_runde import main as neue_runde_main
 from actions.upload_scorecard import main as upload_scorecard_main
@@ -275,7 +278,8 @@ def render(st):
     if st.button("Berechne den Tag"):
         try:
             result = berechne_den_tag_main()
-            st.session_state.konf_output = result
+            result2 = erzeuge_stats_main()
+            st.session_state.konf_output = f"Berechne:{result}, Pics: {result2}"
             # Nach Berechnung: Previews in pics/ aktualisieren
             try:
                 import shutil
@@ -287,40 +291,23 @@ def render(st):
                 src_front = f"scorecards/{date_key}_front.png"
                 src_back = f"scorecards/{date_key}_back.png"
                 src_rank = f"rankings/{date_key}.png"
-                # Ziel-Pfade
-                front_img = "pics/scorecard_front.png"
-                back_img = "pics/scorecard_back.png"
-                if os.path.exists(src_front):
-                    shutil.copy2(src_front, front_img)
-                if os.path.exists(src_back):
-                    shutil.copy2(src_back, back_img)
-                if os.path.exists(src_rank):
-                    shutil.copy2(src_rank, "pics/ranking.png")
+               
             except Exception:
                 pass
             st.success("Tag berechnet und Previews aktualisiert.")
         except Exception as e:
             st.error(f"Fehler bei der Tagesberechnung: {e}")
 
-    # Bildpfade definieren
-    front_img = "pics/scorecard_front.png"
-    back_img = "pics/scorecard_back.png"
+        shown_any = False
+        if os.path.exists(src_front):
+            st.image(src_front, caption="Scorecard Front", width='stretch')
+            shown_any = True
+        if os.path.exists(src_back):
+            st.image(src_back, caption="Scorecard Back", width='stretch')
+            shown_any = True
 
-    shown_any = False
-    if os.path.exists(front_img):
-        st.image(front_img, caption="Scorecard Front", width='stretch')
-        shown_any = True
-    if os.path.exists(back_img):
-        st.image(back_img, caption="Scorecard Back", width='stretch')
-        shown_any = True
-
-    if os.path.exists("pics/ranking.png"):
-        st.image("pics/ranking.png", caption="Ranking", width='stretch')
-
-    # Knopf: "Erzeuge Stats"
-    if st.button("Erzeuge Stats"):
-        result = erzeuge_stats_main()
-        st.session_state.konf_output = result
+        if os.path.exists(src_rank):
+            st.image(src_rank, caption="Ranking", width='stretch')
 
     # Download golf_df.json
     try:
@@ -400,6 +387,83 @@ def render(st):
             st.success(f"Datum {date_key} in allrounds.json eingefügt/aktualisiert.")
         except Exception as e:
             st.error(f"Fehler: {e}")
+
+    # --- GitHub API Commit für allrounds.json (ersetzt lokalen Git Push) ---
+    st.markdown("---")
+    if st.button("allrounds.json zu GitHub committen (API)"):
+        log = []
+        path = "json/allrounds.json"
+        token = getattr(st, 'secrets', {}).get("GITHUB_TOKEN") if hasattr(st, 'secrets') else None
+        repo = (getattr(st, 'secrets', {}).get("REPO") if hasattr(st, 'secrets') else None) or "USER/REPO"
+        branch = (getattr(st, 'secrets', {}).get("BRANCH") if hasattr(st, 'secrets') else None) or "main"
+        if not token or repo == "USER/REPO":
+            st.error("GitHub Secrets fehlen (GITHUB_TOKEN / REPO).")
+        else:
+            try:
+                with open(path, "rb") as f:
+                    local_bytes = f.read()
+                local_b64 = base64.b64encode(local_bytes).decode()
+            except Exception as e:
+                st.error(f"Datei kann nicht gelesen werden: {e}")
+            else:
+                headers = {"Authorization": f"token {token}", "Accept": "application/vnd.github+json"}
+                api_url = f"https://api.github.com/repos/{repo}/contents/{path}"
+                # Remote SHA & Inhalt holen
+                r_get = requests.get(api_url, params={"ref": branch}, headers=headers)
+                log.append(f"GET {r_get.status_code}")
+                sha = None
+                remote_same = False
+                if r_get.status_code == 200:
+                    try:
+                        data_json = r_get.json()
+                        sha = data_json.get("sha")
+                        remote_content = data_json.get("content", "").strip()
+                        # GitHub liefert Base64 mit evtl. Zeilenumbrüchen
+                        remote_raw = "".join(remote_content.splitlines())
+                        remote_same = (remote_raw == local_b64)
+                        if remote_same:
+                            log.append("Keine Änderung: lokaler Inhalt == remote.")
+                    except Exception as ex:
+                        log.append(f"Remote Parse Fehler: {ex}")
+                elif r_get.status_code == 404:
+                    log.append("Datei existiert noch nicht remote (wird erstellt).")
+                else:
+                    log.append(f"Unerwarteter GET Status {r_get.status_code}: {r_get.text[:120]}")
+                if remote_same:
+                    st.info("Keine Änderung – Commit übersprungen.")
+                else:
+                    from datetime import datetime as _dt
+                    commit_msg = f"Update allrounds.json {_dt.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}"
+                    payload = {"message": commit_msg, "content": local_b64, "branch": branch}
+                    if sha:
+                        payload["sha"] = sha
+                    r_put = requests.put(api_url, headers=headers, json=payload)
+                    log.append(f"PUT {r_put.status_code}")
+                    if r_put.status_code in (200, 201):
+                        st.success("Commit erfolgreich.")
+                    elif r_put.status_code == 409:
+                        st.warning("409 Konflikt – versuche erneutes Laden.")
+                        r_get2 = requests.get(api_url, params={"ref": branch}, headers=headers)
+                        if r_get2.status_code == 200:
+                            try:
+                                sha2 = r_get2.json().get("sha")
+                                if sha2 and sha2 != sha:
+                                    payload["sha"] = sha2
+                                    r_put2 = requests.put(api_url, headers=headers, json=payload)
+                                    log.append(f"Retry PUT {r_put2.status_code}")
+                                    if r_put2.status_code in (200, 201):
+                                        st.success("Commit nach Retry erfolgreich.")
+                                    else:
+                                        st.error(f"Retry fehlgeschlagen ({r_put2.status_code}).")
+                                else:
+                                    st.error("Konflikt bleibt bestehen.")
+                            except Exception as ex:
+                                st.error(f"Retry Fehler: {ex}")
+                        else:
+                            st.error("Neuladen für Konfliktlösung fehlgeschlagen.")
+                    else:
+                        st.error(f"Commit fehlgeschlagen ({r_put.status_code}).")
+                st.text_area("GitHub API Log", value="\n".join(log), height=260)
 
     # Ausgabefeld "Output"
     text15("Output")
