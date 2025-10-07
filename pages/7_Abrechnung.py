@@ -77,55 +77,9 @@ def render(st):
     players = _load_players()
     expenses = _load_expenses()
 
-    # Formular-Bereich
-    st.markdown("**Neue Ausgabe**")
-    payer = st.selectbox("Bezahlt von", players, key="abrechnung_payer")
-    st.markdown("Betroffene / Profitierer:")
-    beneficiary_flags = {}
-    cols = st.columns(min(6, max(1, len(players))))
-    for i, p in enumerate(players):
-        beneficiary_flags[p] = cols[i % len(cols)].checkbox(p, value=True, key=f"ab_ben_{p}")
-    amount_str = st.text_input("Betrag", value="", key="ab_betrag", help="Numerischer Betrag (Komma oder Punkt)")
-    descr = st.text_input("Beschreibung", value="", key="ab_descr")
-
-    add_clicked = st.button("Ausgabe hinzufügen")
-
-    if add_clicked:
-        # Validierung
-        try:
-            amount_clean = amount_str.replace(",", ".").strip()
-            amount = float(amount_clean)
-        except Exception:
-            st.error("Ungültiger Betrag.")
-            return
-        beneficiaries = [p for p, flag in beneficiary_flags.items() if flag]
-        if not beneficiaries:
-            st.error("Mindestens ein Profitierer auswählen.")
-            return
-        entry = {
-            "id": str(uuid.uuid4()),
-            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            "payer": payer,
-            "beneficiaries": beneficiaries,
-            "amount": amount,
-            "description": descr.strip(),
-        }
-        expenses.append(entry)
-        _save_expenses(expenses)
-        st.success("Ausgabe gespeichert.")
-        # Rerun (Streamlit >=1.32: st.rerun())
-        try:
-            st.rerun()
-        except Exception:
-            try:
-                st.experimental_rerun()  # fallback for older versions
-            except Exception:
-                pass
-
-    # Verteilungstabelle unterhalb des Speicherns
+    # ---------------- Allocation (Ausgaben) Table moved to top ----------------
     if expenses:
-        st.markdown("**Verteilung (Netto je Spieler)**")
-        # Alle Spieler (bereits in players)
+        st.markdown("**Ausgaben**")
         alloc_rows = []
         totals = {p: 0.0 for p in players}
         for e in expenses:
@@ -144,18 +98,15 @@ def render(st):
             for p in players:
                 val = 0.0
                 if p == payer_name:
-                    # Payer bekommt alle negativen Shares der Begünstigten; ist selbst evtl. auch Begünstigter
                     if p in bens:
-                        val = amt - share  # bezahlt und konsumiert Anteil
+                        val = amt - share  # bezahlt & konsumiert
                     else:
-                        val = amt  # bezahlt für andere, bekommt alles zurück
+                        val = amt
                 elif p in bens:
                     val = -share
-                # Summen tracken
                 totals[p] += val
                 row_dict[p] = val
             alloc_rows.append(row_dict)
-        # --- Neue Jahres-Geld-Zeile vor Gesamt ---
         from datetime import datetime as _dt
         current_year = _dt.now().year
         yearly_geld = {p: 0.0 for p in players}
@@ -164,7 +115,6 @@ def render(st):
                 _all = json.load(_f_all)
             if isinstance(_all, dict):
                 for date_key, round_obj in _all.items():
-                    # Datum im Format TT.MM.JJJJ erwartet
                     try:
                         parts = str(date_key).split('.')
                         year_part = int(parts[-1]) if len(parts) == 3 else None
@@ -186,69 +136,107 @@ def render(st):
         except Exception:
             pass
         if any(abs(v) > 1e-9 for v in yearly_geld.values()):
-            # Negative Aggregation (Abzug) der jährlichen Geld-Summen vor Gesamt-Zeile
             geld_row = {"Ausgabe": f"Monetenkuchen {current_year}"}
             for p in players:
                 neg_val = -yearly_geld[p]
                 geld_row[p] = neg_val if abs(neg_val) > 1e-9 else 0.0
                 totals[p] += geld_row[p]
             alloc_rows.append(geld_row)
-        # --- Ende neue Zeile ---
-        # Totals row
         total_row = {"Ausgabe": "Gesamt"}
         for p in players:
             total_row[p] = totals[p]
         alloc_rows.append(total_row)
-        alloc_df = pd.DataFrame(alloc_rows)
-        # Anzeige DataFrame mit Formatierung (leer für 0)
+        import pandas as _pd
+        alloc_df = _pd.DataFrame(alloc_rows)
         display_df = alloc_df.copy()
         for p in [c for c in display_df.columns if c != "Ausgabe"]:
             display_df[p] = display_df[p].apply(lambda x: ("" if abs(x) < 1e-9 else f"{x:.2f}"))
-        def style_neg(val):
-            try:
-                fv = float(val.replace(",","."))
-            except Exception:
+        # Build HTML table to avoid internal scroll (static rendering)
+        FONT_SIZE_PX = 15
+        def _cell_html(val):
+            if val == "":
                 return ""
+            try:
+                fv = float(str(val).replace(',', '.'))
+            except Exception:
+                # Nicht-numerisch trotzdem mit Font-Size ausgeben
+                return f"<span style='font-size:{FONT_SIZE_PX}px;'>{val}</span>"
             if fv < 0:
-                return "color:red;"
-            return ""  # keine Farbe für positive Werte
-        FONT_SIZE_PX = 40 # doppelte Schriftgröße
-        styler = (
-            display_df.style
-            .map(style_neg, subset=[c for c in display_df.columns if c != "Ausgabe"])  # updated from applymap -> map
-            .set_table_styles([
-                {"selector": "th", "props": [("font-size", f"{FONT_SIZE_PX}px")]},
-                {"selector": "td", "props": [("font-size", f"{FONT_SIZE_PX}px")]},
-            ])
-        )
-        st.dataframe(styler, width='stretch')
+                return f"<span style='color:red;font-size:{FONT_SIZE_PX}px;'>{val}</span>"
+            return f"<span style='font-size:{FONT_SIZE_PX}px;'>{val}</span>"
+        # Einheitliche Schriftgröße in gesamter Tabelle über table-level CSS
+        header_html = ''.join([f"<th style='padding:4px;font-size:{FONT_SIZE_PX}px;'>{col}</th>" for col in display_df.columns])
+        body_rows = []
+        for _, row in display_df.iterrows():
+            cells = []
+            for col in display_df.columns:
+                if col == 'Ausgabe':
+                    cells.append(f"<td style='padding:4px;white-space:nowrap;font-size:{FONT_SIZE_PX}px;'>{row[col]}</td>")
+                else:
+                    cells.append(f"<td style='text-align:right;padding:4px;font-size:{FONT_SIZE_PX}px;'>{_cell_html(row[col])}</td>")
+            body_rows.append('<tr>' + ''.join(cells) + '</tr>')
+        table_html = f"""
+        <div style='overflow-x:auto;'>
+        <table style='border-collapse:collapse;width:100%;font-size:{FONT_SIZE_PX}px;'>
+            <thead><tr>{header_html}</tr></thead>
+            <tbody>
+                {''.join(body_rows)}
+            </tbody>
+        </table>
+        </div>
+        """
+        st.markdown(table_html, unsafe_allow_html=True)
+    else:
+        st.info("Noch keine Ausgaben vorhanden.")
 
     st.markdown("---")
-    st.markdown("**Gespeicherte Ausgaben**")
-    expenses = _load_expenses()  # reload after possible save
-    if not expenses:
-        st.info("Noch keine Ausgaben gespeichert.")
-        return
 
+    # ---------------- Formular (Neue Ausgabe) now after table ----------------
+    st.markdown("**Neue Ausgabe hinzufügen**")
+    payer = st.selectbox("Bezahlt von", players, key="abrechnung_payer")
+    st.markdown("Betroffene / Profitierer:")
+    beneficiary_flags = {}
+    cols = st.columns(min(6, max(1, len(players))))
+    for i, p in enumerate(players):
+        beneficiary_flags[p] = cols[i % len(cols)].checkbox(p, value=True, key=f"ab_ben_{p}")
+    amount_str = st.text_input("Betrag", value="", key="ab_betrag", help="Numerischer Betrag (Komma oder Punkt)")
+    descr = st.text_input("Beschreibung", value="", key="ab_descr")
+    add_clicked = st.button("Ausgabe speichern")
+    if add_clicked:
+        try:
+            amount_clean = amount_str.replace(",", ".").strip()
+            amount = float(amount_clean)
+        except Exception:
+            st.error("Ungültiger Betrag.")
+            return
+        beneficiaries = [p for p, flag in beneficiary_flags.items() if flag]
+        if not beneficiaries:
+            st.error("Mindestens ein Profitierer auswählen.")
+            return
+        entry = {
+            "id": str(uuid.uuid4()),
+            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "payer": payer,
+            "beneficiaries": beneficiaries,
+            "amount": amount,
+            "description": descr.strip(),
+        }
+        expenses.append(entry)
+        _save_expenses(expenses)
+        st.success("Ausgabe gespeichert.")
+        try:
+            st.rerun()
+        except Exception:
+            pass
+
+    # ---------------- Edit/Delete (keine gesonderte Tabelle mehr) ----------------
+    if not expenses:
+        return
+    st.markdown("---")
+    st.markdown("**Einträge bearbeiten / löschen**")
     # Bearbeitungsstatus aus Session State
     if "ab_edit_id" not in st.session_state:
         st.session_state.ab_edit_id = None
-
-    # DataFrame bauen
-    table_rows = []
-    for e in expenses:
-        table_rows.append({
-            "Datum": e.get("timestamp",""),
-            "Bezahlt von": e.get("payer",""),
-            "Betrag": e.get("amount",0),
-            "Beschreibung": e.get("description",""),
-            "Profitierer": ", ".join(e.get("beneficiaries", [])),
-            "ID": e.get("id",""),
-        })
-    df = pd.DataFrame(table_rows)
-    st.dataframe(df.drop(columns=["ID"]), width='stretch')
-
-    st.markdown("**Einträge bearbeiten / löschen**")
     for e in expenses:
         with st.expander(f"{e.get('timestamp','')} | {e.get('payer','')} -> {e.get('amount',0)} €"):
             cols_btn = st.columns(3)
@@ -264,8 +252,12 @@ def render(st):
                     pass
             if st.session_state.ab_edit_id == e["id"]:
                 st.markdown("***Bearbeitung***")
-                # Vorbelegung
-                edit_payer = st.selectbox("Bezahlt von (Edit)", _load_players(), index=_load_players().index(e.get("payer","")) if e.get("payer") in _load_players() else 0, key=f"edit_payer_{e['id']}")
+                edit_payer = st.selectbox(
+                    "Bezahlt von (Edit)",
+                    _load_players(),
+                    index=_load_players().index(e.get("payer","")) if e.get("payer") in _load_players() else 0,
+                    key=f"edit_payer_{e['id']}"
+                )
                 edit_amount = st.text_input("Betrag (Edit)", value=str(e.get("amount","")), key=f"edit_amount_{e['id']}")
                 edit_descr = st.text_input("Beschreibung (Edit)", value=e.get("description",""), key=f"edit_descr_{e['id']}")
                 st.markdown("Profitierer (Edit):")
@@ -287,7 +279,6 @@ def render(st):
                         if not new_bens:
                             st.error("Mindestens ein Profitierer auswählen.")
                         else:
-                            # Update
                             for idx, orig in enumerate(expenses):
                                 if orig["id"] == e["id"]:
                                     expenses[idx]["payer"] = edit_payer
