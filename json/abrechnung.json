@@ -1,50 +1,170 @@
 [
   {
-    "id": "1f5e0d4a-1680-4f8f-a5e9-1",
-    "timestamp": "2025-10-06 00:00:00",
+    "id": "exp-0001",
+    "timestamp": "2025-10-07 00:00:00",
     "payer": "Marc",
-    "beneficiaries": ["Andy","Bernie","Buffy","Heiko","Jens","Marc","Markus"],
+    "description": "Torrequebrada Buggies",
     "amount": 168.0,
-    "description": "Torrequebrada Buggies"
+    "beneficiaries": ["Andy","Bernie","Buffy","Heiko","Jens","Marc","Markus"]
   },
   {
-    "id": "2d4d8c9e-0c52-479b-a2f0-2",
-    "timestamp": "2025-10-06 00:00:00",
+    "id": "exp-0002",
+    "timestamp": "2025-10-07 00:00:00",
     "payer": "Heiko",
-    "beneficiaries": ["Andy","Bernie","Buffy","Heiko","Jens","Marc","Markus"],
+    "description": "Cabopino Resto",
     "amount": 115.0,
-    "description": "Cabopino Resto"
+    "beneficiaries": ["Andy","Bernie","Buffy","Heiko","Jens","Marc","Markus"]
   },
   {
-    "id": "3bb9f6fd-b1f0-4af6-8d55-3",
-    "timestamp": "2025-10-06 00:00:00",
+    "id": "exp-0003",
+    "timestamp": "2025-10-07 00:00:00",
     "payer": "Marc",
-    "beneficiaries": ["Andy","Bernie","Buffy","Heiko","Jens","Marc","Markus"],
+    "description": "Cabopino GF und Buggies",
     "amount": 602.0,
-    "description": "Cabopino GF und Buggies"
+    "beneficiaries": ["Andy","Bernie","Buffy","Heiko","Jens","Marc","Markus"]
   },
   {
-    "id": "4c1a7c2e-5af1-4421-96fb-4",
-    "timestamp": "2025-10-06 00:00:00",
+    "id": "exp-0004",
+    "timestamp": "2025-10-07 00:00:00",
     "payer": "Bernie",
-    "beneficiaries": ["Andy","Bernie","Buffy","Heiko","Jens","Marc","Markus"],
+    "description": "Bälle",
     "amount": 75.0,
-    "description": "Bälle"
+    "beneficiaries": ["Andy","Bernie","Buffy","Heiko","Jens","Marc","Markus"]
   },
   {
-    "id": "5e6d2ab0-9b7d-4e51-8c40-5",
-    "timestamp": "2025-10-06 00:00:00",
+    "id": "exp-0005",
+    "timestamp": "2025-10-07 00:00:00",
     "payer": "Bernie",
-    "beneficiaries": ["Andy","Bernie","Buffy","Heiko","Jens","Marc","Markus"],
+    "description": "Hütte Trinkgeld+Wasser",
     "amount": 119.0,
-    "description": "Hütte Trinkgeld+Wasser"
+    "beneficiaries": ["Andy","Bernie","Buffy","Heiko","Jens","Marc","Markus"]
   },
   {
-    "id": "6fa2c1e3-d058-4c9b-b6de-6",
-    "timestamp": "2025-10-06 00:00:00",
+    "id": "exp-0006",
+    "timestamp": "2025-10-07 00:00:00",
     "payer": "Marc",
-    "beneficiaries": ["Bernie","Buffy","Heiko","Jens","Marc","Markus"],
+    "description": "Resto La Cala",
     "amount": 255.0,
-    "description": "Resto La Cala"
+    "beneficiaries": ["Bernie","Buffy","Heiko","Jens","Marc","Markus"]
+  },
+  {
+    "id": "exp-0007",
+    "timestamp": "2025-10-07 00:00:00",
+    "payer": "Marc",
+    "description": "Max Beach",
+    "amount": 30.0,
+    "beneficiaries": ["Bernie","Heiko","Jens","Marc","Markus"]
+  },
+  {
+    "id": "exp-0008",
+    "timestamp": "2025-10-07 00:00:00",
+    "payer": "Jens",
+    "description": "Max Beach",
+    "amount": 150.0,
+    "beneficiaries": ["Bernie","Heiko","Jens","Marc","Markus"]
+  },
+  {
+    "id": "exp-0009",
+    "timestamp": "2025-10-07 00:00:00",
+    "payer": "Heiko",
+    "description": "Lidl",
+    "amount": 585.0,
+    "beneficiaries": ["Andy","Bernie","Buffy","Heiko","Jens","Marc","Markus"]
+  },
+  {
+    "id": "exp-0010",
+    "timestamp": "2025-10-07 00:00:00",
+    "payer": "Markus",
+    "description": "Flug Andy",
+    "amount": 615.0,
+    "beneficiaries": ["Andy"]
+  },
+  {
+    "id": "exp-0011",
+    "timestamp": "2025-10-07 00:00:00",
+    "payer": "Markus",
+    "description": "Flüge",
+    "amount": 2915.0,
+    "beneficiaries": ["Bernie","Heiko","Jens","Marc","Markus"]
+  },
+  {
+    "id": "exp-0012",
+    "timestamp": "2025-10-07 00:00:00",
+    "payer": "Bernie",
+    "description": "Hütte",
+    "amount": 4738.0,
+    "beneficiaries": ["Andy","Bernie","Buffy","Heiko","Jens","Marc","Markus"]
+  },
+  {
+    "id": "exp-0013",
+    "timestamp": "2025-10-07 00:00:00",
+    "payer": "Andy",
+    "description": "Taxi",
+    "amount": 80.0,
+    "beneficiaries": ["Andy","Marc"]
+  },
+  {
+    "id": "exp-0014",
+    "timestamp": "2025-10-07 00:00:00",
+    "payer": "Marc",
+    "description": "GF Torrequebrada",
+    "amount": 878.5,
+    "beneficiaries": ["Andy","Bernie","Buffy","Heiko","Jens","Marc","Markus"]
+  },
+  {
+    "id": "exp-0015",
+    "timestamp": "2025-10-07 00:00:00",
+    "payer": "Marc",
+    "description": "GF La Cala",
+    "amount": 792.0,
+    "beneficiaries": ["Bernie","Buffy","Heiko","Jens","Marc","Markus"]
+  },
+  {
+    "id": "exp-0016",
+    "timestamp": "2025-10-07 00:00:00",
+    "payer": "Marc",
+    "description": "GF Mijas",
+    "amount": 560.0,
+    "beneficiaries": ["Andy","Bernie","Buffy","Heiko","Jens","Marc","Markus"]
+  },
+  {
+    "id": "exp-0017",
+    "timestamp": "2025-10-07 00:00:00",
+    "payer": "Marc",
+    "description": "GF Calanova",
+    "amount": 644.0,
+    "beneficiaries": ["Andy","Bernie","Buffy","Heiko","Jens","Marc","Markus"]
+  },
+  {
+    "id": "exp-0018",
+    "timestamp": "2025-10-07 00:00:00",
+    "payer": "Heiko",
+    "description": "Tanken",
+    "amount": 22.0,
+    "beneficiaries": ["Andy","Bernie","Buffy","Heiko","Jens","Marc","Markus"]
+  },
+  {
+    "id": "exp-0019",
+    "timestamp": "2025-10-07 00:00:00",
+    "payer": "Heiko",
+    "description": "Mietwagen",
+    "amount": 827.0,
+    "beneficiaries": ["Andy","Bernie","Buffy","Heiko","Jens","Marc","Markus"]
+  },
+  {
+    "id": "exp-0020",
+    "timestamp": "2025-10-07 00:00:00",
+    "payer": "Marc",
+    "description": "Essen Flughafen",
+    "amount": 69.0,
+    "beneficiaries": ["Bernie","Heiko","Jens","Marc","Markus"]
+  },
+  {
+    "id": "exp-0021",
+    "timestamp": "2025-10-07 00:00:00",
+    "payer": "Buffy",
+    "description": "Resto Torrequebrada",
+    "amount": 45.5,
+    "beneficiaries": ["Andy","Bernie","Buffy","Heiko","Jens","Marc","Markus"]
   }
 ]

@@ -21,8 +21,6 @@ def render(st):
     def text15(s: str):
         st.markdown(f"<span style='font-size:15px'>{s}</span>", unsafe_allow_html=True)
 
-    text15("Urlaub")
-
     # Data source
     JSON_PATH = "json/allrounds.json"
 

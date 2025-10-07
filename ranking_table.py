@@ -86,7 +86,7 @@ def make_ranking_table(players: dict, save_path: str | None = None, show: bool =
     if n_s_rows:
         rows.extend(n_s_rows)
 
-    col_labels = ["P", "Name", "Net", "G.Hcp", "Bird", "Par", "Bog.", "Strich", "Geld", "L", "LD", "N2"]
+    col_labels = ["P", "Name", "Net", "G.Hcp", "Bird", "Par", "Bog.", "Str.", "Geld", "L", "LD", "N2"]
 
     # Per-column width variables (tweak as needed)
     width = 0.15
@@ -96,9 +96,9 @@ def make_ranking_table(players: dict, save_path: str | None = None, show: bool =
     WIDTH_GHCP = width*1.3
     WIDTH_BIRDIES = width*1.2
     WIDTH_PARS = width
-    WIDTH_BOGIES = width*1.1
+    WIDTH_BOGIES = width*1.3
     WIDTH_STRICH = width
-    WIDTH_GELD = width
+    WIDTH_GELD = width*0.8
     WIDTH_L = width*0.5
     WIDTH_LD = width*0.6
     WIDTH_N2TP = width*0.6

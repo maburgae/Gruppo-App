@@ -3,6 +3,7 @@ import json
 import matplotlib.pyplot as plt
 from pathlib import Path
 from show_scorecard import show_scorecard
+from ranking_table import make_ranking_table
 
 
 def load_round(json_file: str, date_key: str) -> dict:
@@ -15,57 +16,6 @@ def load_round(json_file: str, date_key: str) -> dict:
     if date_key not in data:
         raise ValueError(f"Date {date_key} not found in {json_file}")
     return data[date_key]["Spieler"]
-
-
-def make_ranking_table(players: dict, save_path: str | None = None, show: bool = True):
-    # Daten aufbauen
-    rows = []
-    for name, pdata in players.items():
-        if pdata.get("Platz") is None:
-            continue
-        rows.append([
-            pdata.get("Platz", "-"),
-            name,
-            pdata.get("Netto", 0),
-            pdata.get("Gesp.Hcp", 0),
-            pdata.get("Birdies", 0),
-            pdata.get("Pars", 0),
-            pdata.get("Bogies", 0),
-            pdata.get("Strich", 0),
-            pdata.get("Geld", 0),
-            pdata.get("Ladies", 0),
-            pdata.get("LD", 0),
-            pdata.get("N2TP", 0)
-        ])
-
-    # Sortieren nach Platz (aufsteigend)
-    rows.sort(key=lambda r: r[0])
-
-    col_labels = ["Platz", "Spieler", "Netto", "Ges.Hcp", "Birdies", "Pars", "Bogies", "Strich", "Geld", "Ladies", "LD", "N2TP"]
-
-    # Tabelle plotten
-    fig, ax = plt.subplots(figsize=(8, len(rows) * 0.4 + 0))
-    ax.axis("off")
-
-    table = ax.table(
-        cellText=rows,
-        colLabels=col_labels,
-        loc="center",
-        cellLoc="center",
-    )
-
-    table.auto_set_font_size(False)
-    table.set_fontsize(10)
-    table.scale(1.2, 1.2)
-
-    # plt.title("Ranking of the Day", fontsize=14, pad=20)
-
-    if save_path:
-        plt.savefig(save_path, dpi=100, bbox_inches="tight")
-        print(f"[ok] Saved ranking table to {save_path}")
-    if show:
-        plt.show()
-    plt.close(fig)
 
 
 def main():

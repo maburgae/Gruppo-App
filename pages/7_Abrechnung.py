@@ -155,6 +155,45 @@ def render(st):
                 totals[p] += val
                 row_dict[p] = val
             alloc_rows.append(row_dict)
+        # --- Neue Jahres-Geld-Zeile vor Gesamt ---
+        from datetime import datetime as _dt
+        current_year = _dt.now().year
+        yearly_geld = {p: 0.0 for p in players}
+        try:
+            with open("json/allrounds.json", "r", encoding="utf-8") as _f_all:
+                _all = json.load(_f_all)
+            if isinstance(_all, dict):
+                for date_key, round_obj in _all.items():
+                    # Datum im Format TT.MM.JJJJ erwartet
+                    try:
+                        parts = str(date_key).split('.')
+                        year_part = int(parts[-1]) if len(parts) == 3 else None
+                    except Exception:
+                        year_part = None
+                    if year_part != current_year:
+                        continue
+                    sp_map = round_obj.get("Spieler", {}) or {}
+                    for pname, pdata in sp_map.items():
+                        if pname in yearly_geld:
+                            gval = pdata.get("Geld")
+                            if isinstance(gval, (int, float)) and not isinstance(gval, bool):
+                                yearly_geld[pname] += float(gval)
+                            elif gval not in (None, ""):
+                                try:
+                                    yearly_geld[pname] += float(str(gval).replace(',', '.'))
+                                except Exception:
+                                    pass
+        except Exception:
+            pass
+        if any(abs(v) > 1e-9 for v in yearly_geld.values()):
+            # Negative Aggregation (Abzug) der jährlichen Geld-Summen vor Gesamt-Zeile
+            geld_row = {"Ausgabe": f"Monetenkuchen {current_year}"}
+            for p in players:
+                neg_val = -yearly_geld[p]
+                geld_row[p] = neg_val if abs(neg_val) > 1e-9 else 0.0
+                totals[p] += geld_row[p]
+            alloc_rows.append(geld_row)
+        # --- Ende neue Zeile ---
         # Totals row
         total_row = {"Ausgabe": "Gesamt"}
         for p in players:
@@ -173,10 +212,10 @@ def render(st):
             if fv < 0:
                 return "color:red;"
             return ""  # keine Farbe für positive Werte
-        FONT_SIZE_PX = 30  # doppelte Schriftgröße
+        FONT_SIZE_PX = 40 # doppelte Schriftgröße
         styler = (
             display_df.style
-            .applymap(style_neg, subset=[c for c in display_df.columns if c != "Ausgabe"])  # type: ignore
+            .map(style_neg, subset=[c for c in display_df.columns if c != "Ausgabe"])  # updated from applymap -> map
             .set_table_styles([
                 {"selector": "th", "props": [("font-size", f"{FONT_SIZE_PX}px")]},
                 {"selector": "td", "props": [("font-size", f"{FONT_SIZE_PX}px")]},
