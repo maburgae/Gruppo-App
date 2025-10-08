@@ -3,6 +3,7 @@ import pandas as pd
 import os
 import base64
 import requests
+import subprocess  # für Bulk Git Commit
 
 from actions.neue_runde import main as neue_runde_main
 from actions.upload_scorecard import main as upload_scorecard_main
@@ -495,6 +496,55 @@ def render(st):
                     failed += 1
             log.append(f"Ergebnis: updated={updated} skipped={skipped} failed={failed}")
         st.text_area("GitHub API Log", value="\n".join(log), height=420)
+
+    # --- Bulk Git Commit aller Änderungen (nutzt lokales Git) ---
+    st.markdown("---")
+    if st.button("Alle Änderungen committen & pushen (git)"):
+        log = []
+        token = getattr(st, 'secrets', {}).get("GITHUB_TOKEN") if hasattr(st, 'secrets') else None
+        repo = (getattr(st, 'secrets', {}).get("REPO") if hasattr(st, 'secrets') else None) or "maburgae/Gruppo-App"
+        branch = (getattr(st, 'secrets', {}).get("BRANCH") if hasattr(st, 'secrets') else None) or "main"
+        def run(cmd, hide=False):
+            try:
+                res = subprocess.run(cmd, capture_output=True, text=True, check=False)
+                if not hide:
+                    log.append(f"$ {' '.join(cmd)}\n{res.stdout}{res.stderr}")
+                return res.returncode
+            except Exception as e:
+                log.append(f"FEHLER {' '.join(cmd)} -> {e}")
+                return 1
+        # Prüfen ob Git Repo
+        if run(["git", "rev-parse", "--is-inside-work-tree"]) != 0:
+            st.error("Kein Git-Repository verfügbar.")
+        else:
+            if not token:
+                st.error("GITHUB_TOKEN Secret fehlt.")
+            else:
+                # Remote URL mit Token setzen (Token nicht ins Log schreiben!)
+                safe_remote = f"https://x-access-token:***@github.com/{repo}.git"
+                real_remote = f"https://x-access-token:{token}@github.com/{repo}.git"
+                subprocess.run(["git", "remote", "set-url", "origin", real_remote], check=False)
+                log.append(f"Remote gesetzt: {safe_remote}")
+                # Status anzeigen
+                run(["git", "status", "-s"])
+                # Änderungen hinzufügen
+                run(["git", "add", "-A"])
+                # Prüfen ob etwas zu committen ist
+                diff_cached = subprocess.run(["git", "diff", "--cached", "--name-only"], capture_output=True, text=True)
+                changed = [l for l in diff_cached.stdout.splitlines() if l.strip()]
+                if not changed:
+                    log.append("Keine Änderungen zum Commit.")
+                else:
+                    from datetime import datetime as _dt
+                    msg = f"Bulk commit via Streamlit {_dt.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}"
+                    run(["git", "commit", "-m", msg])
+                    # Push
+                    rc = run(["git", "push", "origin", branch])
+                    if rc == 0:
+                        st.success("Bulk Push erfolgreich.")
+                    else:
+                        st.error("Bulk Push fehlgeschlagen.")
+        st.text_area("Bulk Git Log", value="\n".join(log), height=320)
 
     # Ausgabefeld "Output"
     text15("Output")
