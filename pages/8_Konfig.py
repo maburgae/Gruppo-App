@@ -509,12 +509,13 @@ def render(st):
                 res = subprocess.run(cmd, capture_output=True, text=True, check=False)
                 if not hide:
                     log.append(f"$ {' '.join(cmd)}\n{res.stdout}{res.stderr}")
-                return res.returncode
+                return res.returncode, res.stdout.strip()
             except Exception as e:
                 log.append(f"FEHLER {' '.join(cmd)} -> {e}")
-                return 1
+                return 1, ""
         # Prüfen ob Git Repo
-        if run(["git", "rev-parse", "--is-inside-work-tree"]) != 0:
+        rc_repo, _ = run(["git", "rev-parse", "--is-inside-work-tree"])
+        if rc_repo != 0:
             st.error("Kein Git-Repository verfügbar.")
         else:
             if not token:
@@ -525,13 +526,24 @@ def render(st):
                 real_remote = f"https://x-access-token:{token}@github.com/{repo}.git"
                 subprocess.run(["git", "remote", "set-url", "origin", real_remote], check=False)
                 log.append(f"Remote gesetzt: {safe_remote}")
+                # Git Identity sicherstellen
+                rc_name, name_val = run(["git", "config", "user.name"], hide=True)
+                rc_mail, mail_val = run(["git", "config", "user.email"], hide=True)
+                if rc_name != 0 or not name_val:
+                    run(["git", "config", "user.name", "Gruppo Streamlit Bot"])
+                else:
+                    log.append(f"Git user.name vorhanden: {name_val}")
+                if rc_mail != 0 or not mail_val:
+                    run(["git", "config", "user.email", "gruppo-bot@example.local"])
+                else:
+                    log.append(f"Git user.email vorhanden: {mail_val}")
                 # Status anzeigen
                 run(["git", "status", "-s"])
                 # Änderungen hinzufügen
                 run(["git", "add", "-A"])
                 # Prüfen ob etwas zu committen ist
-                diff_cached = subprocess.run(["git", "diff", "--cached", "--name-only"], capture_output=True, text=True)
-                changed = [l for l in diff_cached.stdout.splitlines() if l.strip()]
+                rc_diff, diff_out = run(["git", "diff", "--cached", "--name-only"], hide=True)
+                changed = [l for l in diff_out.splitlines() if l.strip()]
                 if not changed:
                     log.append("Keine Änderungen zum Commit.")
                 else:
@@ -539,8 +551,8 @@ def render(st):
                     msg = f"Bulk commit via Streamlit {_dt.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}"
                     run(["git", "commit", "-m", msg])
                     # Push
-                    rc = run(["git", "push", "origin", branch])
-                    if rc == 0:
+                    rc_push, _ = run(["git", "push", "origin", branch])
+                    if rc_push == 0:
                         st.success("Bulk Push erfolgreich.")
                     else:
                         st.error("Bulk Push fehlgeschlagen.")
