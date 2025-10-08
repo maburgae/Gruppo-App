@@ -388,103 +388,113 @@ def render(st):
         except Exception as e:
             st.error(f"Fehler: {e}")
 
-    # --- GitHub API Commit für allrounds.json (ersetzt lokalen Git Push) ---
+    # --- GitHub API Commit für mehrere JSONs (golf_df, allrounds, abrechnung) ---
     st.markdown("---")
-    if st.button("golf_df.json zu GitHub committen (API)"):
+    if st.button("JSON Dateien (golf_df, allrounds, abrechnung) zu GitHub committen (API)"):
         log = []
-        path = "json/golf_df/golf_df.json"
+        files = [
+            ("json/golf_df/golf_df.json", "golf_df.json"),
+            ("json/allrounds.json", "allrounds.json"),
+            ("json/abrechnung.json", "abrechnung.json"),
+        ]
         token = getattr(st, 'secrets', {}).get("GITHUB_TOKEN") if hasattr(st, 'secrets') else None
         repo = (getattr(st, 'secrets', {}).get("REPO") if hasattr(st, 'secrets') else None) or "USER/REPO"
         branch = (getattr(st, 'secrets', {}).get("BRANCH") if hasattr(st, 'secrets') else None) or "main"
-        # Debug: welche Secret Keys vorhanden
         try:
             secret_keys = list(getattr(st, 'secrets', {}).keys()) if hasattr(st, 'secrets') else []
             log.append(f"Secrets Keys: {secret_keys}")
-        except Exception as _ex_sk:
-            log.append(f"Secrets Keys read error: {_ex_sk}")
-        log.append(f"Repo={repo} Branch={branch} Path={path} TokenVorhanden={bool(token)}")
+        except Exception:
+            pass
+        log.append(f"Repo={repo} Branch={branch} TokenVorhanden={bool(token)}")
         if not token or repo == "USER/REPO":
             st.error("GitHub Secrets fehlen (GITHUB_TOKEN / REPO).")
         else:
-            try:
-                with open(path, "rb") as f:
-                    local_bytes = f.read()
-                from hashlib import md5
-                local_md5 = md5(local_bytes).hexdigest()
-                log.append(f"Lokale Datei Bytes={len(local_bytes)} MD5={local_md5}")
-                local_b64 = base64.b64encode(local_bytes).decode()
-            except Exception as e:
-                st.error(f"Datei kann nicht gelesen werden: {e}")
-            else:
-                headers = {"Authorization": f"token {token}", "Accept": "application/vnd.github+json"}
+            headers = {"Authorization": f"token {token}", "Accept": "application/vnd.github+json"}
+            from hashlib import md5 as _md5
+            from datetime import datetime as _dt
+            updated = 0
+            skipped = 0
+            failed = 0
+            for path, short_name in files:
+                log.append(f"--- {short_name} ---")
+                if not os.path.exists(path):
+                    log.append("Datei fehlt lokal – übersprungen.")
+                    failed += 1
+                    continue
+                try:
+                    with open(path, "rb") as f:
+                        local_bytes = f.read()
+                    local_md5 = _md5(local_bytes).hexdigest()
+                    local_b64 = base64.b64encode(local_bytes).decode()
+                    log.append(f"Local MD5={local_md5} Bytes={len(local_bytes)}")
+                except Exception as ex:
+                    log.append(f"Lesefehler: {ex}")
+                    failed += 1
+                    continue
                 api_url = f"https://api.github.com/repos/{repo}/contents/{path}"
-                # Remote SHA & Inhalt holen
-                r_get = requests.get(api_url, params={"ref": branch}, headers=headers)
-                log.append(f"GET {r_get.status_code}")
                 sha = None
                 remote_same = False
-                remote_md5 = None
+                r_get = requests.get(api_url, params={"ref": branch}, headers=headers)
+                log.append(f"GET {r_get.status_code}")
                 if r_get.status_code == 200:
                     try:
                         data_json = r_get.json()
                         sha = data_json.get("sha")
                         remote_content = data_json.get("content", "").strip()
                         remote_raw = "".join(remote_content.splitlines())
-                        # decode remote for md5
                         try:
                             remote_bytes = base64.b64decode(remote_raw)
-                            from hashlib import md5 as _md5
                             remote_md5 = _md5(remote_bytes).hexdigest()
                             log.append(f"Remote MD5={remote_md5} Bytes={len(remote_bytes)}")
-                        except Exception as _ex_md5:
-                            log.append(f"Remote MD5 Fehler: {_ex_md5}")
-                        remote_same = (remote_raw == local_b64)
-                        if remote_same:
-                            log.append("Keine Änderung: lokaler Inhalt == remote.")
-                    except Exception as ex:
-                        log.append(f"Remote Parse Fehler: {ex}")
+                            if remote_md5 == local_md5:
+                                remote_same = True
+                        except Exception as ex_md5:
+                            log.append(f"Remote MD5 Fehler: {ex_md5}")
+                    except Exception as ex_par:
+                        log.append(f"Remote Parse Fehler: {ex_par}")
                 elif r_get.status_code == 404:
-                    log.append("Datei existiert noch nicht remote (wird erstellt).")
+                    log.append("Datei existiert remote noch nicht – wird angelegt.")
                 else:
-                    log.append(f"Unerwarteter GET Status {r_get.status_code}: {r_get.text[:200]}")
+                    log.append(f"GET Fehler {r_get.status_code}: {r_get.text[:180]}")
                 if remote_same:
-                    st.info("Keine Änderung – Commit übersprungen.")
-                else:
-                    from datetime import datetime as _dt
-                    commit_msg = f"Update golf_df.json {_dt.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}"
-                    payload = {"message": commit_msg, "content": local_b64, "branch": branch}
-                    if sha:
-                        payload["sha"] = sha
-                    r_put = requests.put(api_url, headers=headers, json=payload)
-                    log.append(f"PUT {r_put.status_code}")
-                    log.append(f"PUT body: {r_put.text[:400]}")
-                    if r_put.status_code in (200, 201):
-                        st.success("Commit erfolgreich.")
-                    elif r_put.status_code == 409:
-                        st.warning("409 Konflikt – versuche erneutes Laden.")
-                        r_get2 = requests.get(api_url, params={"ref": branch}, headers=headers)
-                        log.append(f"Retry GET {r_get2.status_code}")
-                        if r_get2.status_code == 200:
-                            try:
-                                sha2 = r_get2.json().get("sha")
-                                if sha2 and sha2 != sha:
-                                    payload["sha"] = sha2
-                                    r_put2 = requests.put(api_url, headers=headers, json=payload)
-                                    log.append(f"Retry PUT {r_put2.status_code}")
-                                    log.append(f"Retry PUT body: {r_put2.text[:300]}")
-                                    if r_put2.status_code in (200, 201):
-                                        st.success("Commit nach Retry erfolgreich.")
-                                    else:
-                                        st.error(f"Retry fehlgeschlagen ({r_put2.status_code}).")
+                    log.append("Unverändert – übersprungen.")
+                    skipped += 1
+                    continue
+                commit_msg = f"Update {short_name} {_dt.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}"
+                payload = {"message": commit_msg, "content": local_b64, "branch": branch}
+                if sha:
+                    payload["sha"] = sha
+                r_put = requests.put(api_url, headers=headers, json=payload)
+                log.append(f"PUT {r_put.status_code}")
+                if r_put.status_code in (200, 201):
+                    updated += 1
+                elif r_put.status_code == 409:
+                    log.append("409 Konflikt – Retry versuch.")
+                    # Einmal SHA nachladen und erneut
+                    r_get2 = requests.get(api_url, params={"ref": branch}, headers=headers)
+                    if r_get2.status_code == 200:
+                        try:
+                            sha2 = r_get2.json().get("sha")
+                            if sha2 and sha2 != sha:
+                                payload["sha"] = sha2
+                                r_put2 = requests.put(api_url, headers=headers, json=payload)
+                                log.append(f"Retry PUT {r_put2.status_code}")
+                                if r_put2.status_code in (200, 201):
+                                    updated += 1
                                 else:
-                                    st.error("Konflikt bleibt bestehen.")
-                            except Exception as ex:
-                                st.error(f"Retry Fehler: {ex}")
-                        else:
-                            st.error("Neuladen für Konfliktlösung fehlgeschlagen.")
+                                    failed += 1
+                            else:
+                                failed += 1
+                        except Exception as exr:
+                            log.append(f"Retry Fehler: {exr}")
+                            failed += 1
                     else:
-                        st.error(f"Commit fehlgeschlagen ({r_put.status_code}).")
-                st.text_area("GitHub API Log", value="\n".join(log), height=360)
+                        failed += 1
+                else:
+                    log.append(f"Fehler Antwort: {r_put.text[:220]}")
+                    failed += 1
+            log.append(f"Ergebnis: updated={updated} skipped={skipped} failed={failed}")
+        st.text_area("GitHub API Log", value="\n".join(log), height=420)
 
     # Ausgabefeld "Output"
     text15("Output")
