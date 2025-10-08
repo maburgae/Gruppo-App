@@ -390,18 +390,28 @@ def render(st):
 
     # --- GitHub API Commit für allrounds.json (ersetzt lokalen Git Push) ---
     st.markdown("---")
-    if st.button("allrounds.json zu GitHub committen (API)"):
+    if st.button("golf_df.json zu GitHub committen (API)"):
         log = []
         path = "json/golf_df/golf_df.json"
         token = getattr(st, 'secrets', {}).get("GITHUB_TOKEN") if hasattr(st, 'secrets') else None
         repo = (getattr(st, 'secrets', {}).get("REPO") if hasattr(st, 'secrets') else None) or "USER/REPO"
         branch = (getattr(st, 'secrets', {}).get("BRANCH") if hasattr(st, 'secrets') else None) or "main"
+        # Debug: welche Secret Keys vorhanden
+        try:
+            secret_keys = list(getattr(st, 'secrets', {}).keys()) if hasattr(st, 'secrets') else []
+            log.append(f"Secrets Keys: {secret_keys}")
+        except Exception as _ex_sk:
+            log.append(f"Secrets Keys read error: {_ex_sk}")
+        log.append(f"Repo={repo} Branch={branch} Path={path} TokenVorhanden={bool(token)}")
         if not token or repo == "USER/REPO":
             st.error("GitHub Secrets fehlen (GITHUB_TOKEN / REPO).")
         else:
             try:
                 with open(path, "rb") as f:
                     local_bytes = f.read()
+                from hashlib import md5
+                local_md5 = md5(local_bytes).hexdigest()
+                log.append(f"Lokale Datei Bytes={len(local_bytes)} MD5={local_md5}")
                 local_b64 = base64.b64encode(local_bytes).decode()
             except Exception as e:
                 st.error(f"Datei kann nicht gelesen werden: {e}")
@@ -413,13 +423,21 @@ def render(st):
                 log.append(f"GET {r_get.status_code}")
                 sha = None
                 remote_same = False
+                remote_md5 = None
                 if r_get.status_code == 200:
                     try:
                         data_json = r_get.json()
                         sha = data_json.get("sha")
                         remote_content = data_json.get("content", "").strip()
-                        # GitHub liefert Base64 mit evtl. Zeilenumbrüchen
                         remote_raw = "".join(remote_content.splitlines())
+                        # decode remote for md5
+                        try:
+                            remote_bytes = base64.b64decode(remote_raw)
+                            from hashlib import md5 as _md5
+                            remote_md5 = _md5(remote_bytes).hexdigest()
+                            log.append(f"Remote MD5={remote_md5} Bytes={len(remote_bytes)}")
+                        except Exception as _ex_md5:
+                            log.append(f"Remote MD5 Fehler: {_ex_md5}")
                         remote_same = (remote_raw == local_b64)
                         if remote_same:
                             log.append("Keine Änderung: lokaler Inhalt == remote.")
@@ -428,7 +446,7 @@ def render(st):
                 elif r_get.status_code == 404:
                     log.append("Datei existiert noch nicht remote (wird erstellt).")
                 else:
-                    log.append(f"Unerwarteter GET Status {r_get.status_code}: {r_get.text[:120]}")
+                    log.append(f"Unerwarteter GET Status {r_get.status_code}: {r_get.text[:200]}")
                 if remote_same:
                     st.info("Keine Änderung – Commit übersprungen.")
                 else:
@@ -439,11 +457,13 @@ def render(st):
                         payload["sha"] = sha
                     r_put = requests.put(api_url, headers=headers, json=payload)
                     log.append(f"PUT {r_put.status_code}")
+                    log.append(f"PUT body: {r_put.text[:400]}")
                     if r_put.status_code in (200, 201):
                         st.success("Commit erfolgreich.")
                     elif r_put.status_code == 409:
                         st.warning("409 Konflikt – versuche erneutes Laden.")
                         r_get2 = requests.get(api_url, params={"ref": branch}, headers=headers)
+                        log.append(f"Retry GET {r_get2.status_code}")
                         if r_get2.status_code == 200:
                             try:
                                 sha2 = r_get2.json().get("sha")
@@ -451,6 +471,7 @@ def render(st):
                                     payload["sha"] = sha2
                                     r_put2 = requests.put(api_url, headers=headers, json=payload)
                                     log.append(f"Retry PUT {r_put2.status_code}")
+                                    log.append(f"Retry PUT body: {r_put2.text[:300]}")
                                     if r_put2.status_code in (200, 201):
                                         st.success("Commit nach Retry erfolgreich.")
                                     else:
@@ -463,7 +484,7 @@ def render(st):
                             st.error("Neuladen für Konfliktlösung fehlgeschlagen.")
                     else:
                         st.error(f"Commit fehlgeschlagen ({r_put.status_code}).")
-                st.text_area("GitHub API Log", value="\n".join(log), height=260)
+                st.text_area("GitHub API Log", value="\n".join(log), height=360)
 
     # Ausgabefeld "Output"
     text15("Output")
