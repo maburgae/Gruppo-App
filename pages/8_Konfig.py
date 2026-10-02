@@ -25,6 +25,8 @@ UPLOAD_MODEL_OPTIONS = [
 
 def _init_state():
     import streamlit as st
+    if "konf_platzname" not in st.session_state:
+        st.session_state.konf_platzname = ""
     if "konf_players" not in st.session_state:
         st.session_state.konf_players = json.dumps(ROUND_PLAYERS, ensure_ascii=False)
     if "konf_file_id" not in st.session_state:
@@ -72,8 +74,60 @@ def render(st):
         .compact-player-grid div[data-testid='stCheckbox'] {
             margin-bottom: 0.1rem !important;
         }
+        .compact-player-grid div[data-testid='stCheckbox'] label {
+            white-space: nowrap !important;
+            padding-right: 0 !important;
+        }
         .compact-player-grid div[data-testid='stSelectbox'] {
             margin-top: -0.2rem !important;
+            max-width: 39px !important;
+            min-width: 39px !important;
+        }
+        .compact-player-grid div[data-testid='stSelectbox'] [data-baseweb='select'] {
+            width: 39px !important;
+            min-width: 39px !important;
+            max-width: 39px !important;
+        }
+        .compact-player-grid div[data-testid='stSelectbox'] [data-baseweb='select'] > div {
+            min-height: 30px !important;
+            padding-left: 6px !important;
+            padding-right: 18px !important;
+        }
+        .score-row-label {
+            margin: 0 !important;
+            padding: 0 !important;
+            line-height: 1.2 !important;
+            white-space: nowrap !important;
+            font-weight: 700 !important;
+        }
+        .score-row-label p {
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+        @media (max-width: 900px) {
+            div[data-testid='stHorizontalBlock'] {
+                flex-wrap: wrap !important;
+                gap: 0.25rem !important;
+            }
+            .compact-player-grid div[data-testid='column'] {
+                flex: 0 0 calc(33.33% - 0.25rem) !important;
+                width: calc(33.33% - 0.25rem) !important;
+                min-width: calc(33.33% - 0.25rem) !important;
+                max-width: calc(33.33% - 0.25rem) !important;
+            }
+            .compact-player-grid div[data-testid='stCheckbox'] {
+                min-width: 100% !important;
+                max-width: 100% !important;
+            }
+            .compact-player-grid div[data-testid='stSelectbox'] {
+                max-width: 44px !important;
+                min-width: 44px !important;
+            }
+            .compact-player-grid div[data-testid='stSelectbox'] [data-baseweb='select'] {
+                width: 44px !important;
+                min-width: 44px !important;
+                max-width: 44px !important;
+            }
         }
         </style>
         """,
@@ -103,29 +157,8 @@ def render(st):
 
     text15("Konfiguration")
 
-    # Vorab vorhandenen Ort laden (falls vorhanden) um Platzname vorzubelegen
-    existing_ort = ""
-    try:
-        with open("json/golf_df/golf_df.json", "r", encoding="utf-8") as _f_ort:
-            _gdf_tmp = json.load(_f_ort)
-        if isinstance(_gdf_tmp, dict) and len(_gdf_tmp) > 0:
-            _dk = next(iter(_gdf_tmp.keys()))
-            existing_ort = _gdf_tmp[_dk].get("Ort", "") or ""
-    except Exception:
-        pass
-
-    if not st.session_state.get("konf_platzname_val"):
-        if existing_ort:
-            st.session_state["konf_platzname_val"] = existing_ort
-            st.session_state["konf_platzname"] = existing_ort
-
-    # Eingabefeld Platzname (voreingestellt mit vorhandenem Ort)
-    platzname = st.text_input(
-        "Platzname",
-        key="konf_platzname",
-        value=st.session_state.get("konf_platzname_val", existing_ort)
-    )
-    st.session_state["konf_platzname_val"] = platzname
+    # Eingabefeld Platzname (ohne Defaultwert)
+    platzname = st.text_input("Platzname", key="konf_platzname")
 
     # Datum für die neue Runde (default: heute, aber änderbar)
     round_date = st.date_input("Datum", key="konf_round_date")
@@ -138,7 +171,7 @@ def render(st):
     player_cols = st.columns(len(ROUND_PLAYERS), gap="small")
     for col, pname in zip(player_cols, ROUND_PLAYERS):
         checked = col.checkbox(pname, key=f"konf_player_{pname}")
-        col.selectbox("Flight", options=["1", "2"], key=f"flight_{pname}")
+        col.selectbox("Flight", options=["1", "2"], key=f"flight_{pname}", label_visibility="collapsed")
         if checked:
             selected_players.append(pname)
             flight_values[pname] = st.session_state.get(f"flight_{pname}", "1")
@@ -187,16 +220,12 @@ def render(st):
             st.session_state.konf_uploaded_name = uploaded_file.name
             st.success(f"Upload verarbeitet mit Modell: {st.session_state.get('konf_upload_model', UPLOAD_MODEL_OPTIONS[0])}")
 
-    # Dropdown-Editor für Par, Hcp und Scores aller Spieler
+    # Zwei Tabellen-Editoren (1-9 und 10-18) für Par, Hcp und Scores aller Spieler
     with open("json/golf_df/golf_df.json", "r", encoding="utf-8") as f:
         golf_data = json.load(f)
     key = list(golf_data.keys())[0]
     data = golf_data[key]
-    text15("Scorecard Eingabe (Dropdowns)")
-
-    PAR_OPTIONS = [3, 4, 5]
-    HCP_OPTIONS = list(range(1, 19))
-    SCORE_OPTIONS = [None] + list(range(1, 11))
+    text15("Scorecard Eingabe (Tabelle)")
 
     def _norm_list(vals, fill=None):
         out = list(vals or [])
@@ -204,55 +233,13 @@ def render(st):
             out.append(fill)
         return out[:18]
 
-    def _coerce_for_options(value, options):
-        if value in options:
-            return value
+    def _coerce_int(value):
         if value is None:
-            return options[0]
+            return None
         try:
-            iv = int(value)
-            if iv in options:
-                return iv
+            return int(value)
         except Exception:
-            pass
-        return options[0]
-
-    def _draw_score_section(container, section_title: str, start_idx: int, end_idx: int,
-                            par_values: list, hcp_values: list, player_values: dict):
-        container.markdown(f"**{section_title}**")
-
-        # Header row (holes)
-        header_cols = container.columns([1.8] + [1] * 9)
-        header_cols[0].markdown("&nbsp;", unsafe_allow_html=True)
-        for c, hole_idx in enumerate(range(start_idx, end_idx), start=1):
-            header_cols[c].markdown(f"<b>{hole_idx + 1}</b>", unsafe_allow_html=True)
-
-        def _draw_row(row_label: str, key_prefix: str, values: list, options: list):
-            cols = container.columns([1.8] + [1] * 9)
-            cols[0].markdown(f"<b>{row_label}</b>", unsafe_allow_html=True)
-            picked = []
-            norm_values = _norm_list(values)
-            for c, hole_idx in enumerate(range(start_idx, end_idx), start=1):
-                v = _coerce_for_options(norm_values[hole_idx], options)
-                idx = options.index(v) if v in options else 0
-                picked.append(cols[c].selectbox(
-                    f"{row_label} {hole_idx+1}",
-                    options=options,
-                    index=idx,
-                    key=f"{key_prefix}_{hole_idx+1}",
-                    format_func=(lambda x: "" if x is None else str(x)),
-                    label_visibility="collapsed",
-                ))
-            return picked
-
-        section_par = _draw_row("PAR", "konf_par", par_values, PAR_OPTIONS)
-        section_hcp = _draw_row("HCP", "konf_hcp", hcp_values, HCP_OPTIONS)
-
-        section_scores = {}
-        for player_name, score_vals in player_values.items():
-            section_scores[player_name] = _draw_row(player_name, f"konf_score_{player_name}", score_vals, SCORE_OPTIONS)
-
-        return section_par, section_hcp, section_scores
+            return None
 
     current_par = _norm_list(data.get("Par", []))
     current_hcp = _norm_list(data.get("Hcp", []))
@@ -262,29 +249,103 @@ def render(st):
         for player in players_present
     }
 
+    front_hole_columns = [str(i) for i in range(1, 10)]
+    back_hole_columns = [str(i) for i in range(10, 19)]
+
+    def _build_table_rows(hole_columns):
+        rows = []
+        par_row = {"Typ": "PAR"}
+        hcp_row = {"Typ": "HCP"}
+        for col in hole_columns:
+            idx = int(col) - 1
+            par_row[col] = _coerce_int(current_par[idx])
+            hcp_row[col] = _coerce_int(current_hcp[idx])
+        rows.append(par_row)
+        rows.append(hcp_row)
+
+        for player in players_present:
+            row = {"Typ": player}
+            vals = current_scores.get(player, [None] * 18)
+            for col in hole_columns:
+                idx = int(col) - 1
+                row[col] = _coerce_int(vals[idx])
+            rows.append(row)
+        return rows
+
+    front_table_rows = _build_table_rows(front_hole_columns)
+    back_table_rows = _build_table_rows(back_hole_columns)
+
+    st.caption("Loecher 1-9")
+    edited_front = st.data_editor(
+        front_table_rows,
+        hide_index=True,
+        use_container_width=True,
+        num_rows="fixed",
+        key="konf_score_editor_table_front",
+        column_config={
+            "Typ": st.column_config.TextColumn("Typ", disabled=True),
+            **{col: st.column_config.NumberColumn(col, min_value=0, max_value=18, step=1) for col in front_hole_columns},
+        },
+    )
+
+    st.caption("Loecher 10-18")
+    edited_back = st.data_editor(
+        back_table_rows,
+        hide_index=True,
+        use_container_width=True,
+        num_rows="fixed",
+        key="konf_score_editor_table_back",
+        column_config={
+            "Typ": st.column_config.TextColumn("Typ", disabled=True),
+            **{col: st.column_config.NumberColumn(col, min_value=0, max_value=18, step=1) for col in back_hole_columns},
+        },
+    )
+
+    if hasattr(edited_front, "to_dict"):
+        edited_rows_front = edited_front.to_dict(orient="records")
+    elif isinstance(edited_front, list):
+        edited_rows_front = edited_front
+    else:
+        edited_rows_front = front_table_rows
+
+    if hasattr(edited_back, "to_dict"):
+        edited_rows_back = edited_back.to_dict(orient="records")
+    elif isinstance(edited_back, list):
+        edited_rows_back = edited_back
+    else:
+        edited_rows_back = back_table_rows
+
+    row_map_front = {str(r.get("Typ", "")): r for r in edited_rows_front if isinstance(r, dict)}
+    row_map_back = {str(r.get("Typ", "")): r for r in edited_rows_back if isinstance(r, dict)}
+
+    row_map = {}
+    for typ in ["PAR", "HCP"] + players_present:
+        merged_row = {"Typ": typ}
+        merged_row.update(row_map_front.get(typ, {}))
+        merged_row.update(row_map_back.get(typ, {}))
+        row_map[typ] = merged_row
+
     new_par = list(current_par)
     new_hcp = list(current_hcp)
     new_scores = {player: list(vals) for player, vals in current_scores.items()}
 
-    left_par, left_hcp, left_scores = _draw_score_section(
-        st, "Löcher 1-9", 0, 9, current_par, current_hcp, current_scores
-    )
-    right_par, right_hcp, right_scores = _draw_score_section(
-        st, "Löcher 10-18", 9, 18, current_par, current_hcp, current_scores
-    )
-
-    for i in range(9):
-        new_par[i] = left_par[i]
-        new_hcp[i] = left_hcp[i]
-        new_par[i + 9] = right_par[i]
-        new_hcp[i + 9] = right_hcp[i]
+    par_row_new = row_map.get("PAR", {})
+    hcp_row_new = row_map.get("HCP", {})
+    for i in range(18):
+        col = str(i + 1)
+        p = _coerce_int(par_row_new.get(col))
+        h = _coerce_int(hcp_row_new.get(col))
+        if p is not None:
+            new_par[i] = p
+        if h is not None:
+            new_hcp[i] = h
 
     for player in players_present:
-        left_vals = left_scores.get(player, [None] * 9)
-        right_vals = right_scores.get(player, [None] * 9)
-        for i in range(9):
-            new_scores[player][i] = left_vals[i]
-            new_scores[player][i + 9] = right_vals[i]
+        row = row_map.get(player, {})
+        for i in range(18):
+            col = str(i + 1)
+            v = _coerce_int(row.get(col))
+            new_scores[player][i] = None if v in (None, 0) else v
 
     # Auto-save: direkt speichern, sobald ein Dropdown-Wert geändert wurde
     needs_save = (new_par != current_par) or (new_hcp != current_hcp)
