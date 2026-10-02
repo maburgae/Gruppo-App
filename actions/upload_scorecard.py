@@ -4,7 +4,7 @@ from datetime import date, datetime
 from functions import upload_image_for_vision, query_vision_model, copy_scorecard_to_golf_df
 from preprocess_pic import preprocess
 
-def main(image_path: str | None = None, pre_process: bool = True) -> str:
+def main(image_path: str | None = None, pre_process: bool = True, model_name: str = "gpt-5-mini") -> str:
     """Verarbeitet Upload-Referenz (File-ID).
     pre_process steuert, ob das Bild vor dem Upload vorverarbeitet wird.
     """
@@ -22,8 +22,8 @@ def main(image_path: str | None = None, pre_process: bool = True) -> str:
     # Disable AI query switch kept, but we always upload the image_to_use
     image_id = upload_image_for_vision(image_to_use)
 
-    # Set model type
-    gpt_model = "gpt-5-mini"  # Vision-capable model
+    # Set model type (configurable via UI)
+    gpt_model = (model_name or "gpt-5-mini").strip()
 
     # Prepare prompt for Vision API
     prompt = (

@@ -1,5 +1,4 @@
 import json
-import pandas as pd
 import os
 import base64
 import requests
@@ -15,6 +14,14 @@ import os
 
 DEFAULT_PLAYERS_STR = '["Marc","Andy","Bernie","Jens","Heiko","Markus","Buffy"]'
 ROUND_PLAYERS = ["Marc", "Andy", "Bernie", "Jens", "Markus", "Buffy"]
+UPLOAD_MODEL_OPTIONS = [
+    "gpt-5-mini",
+    "gpt-5",
+    "gpt-4.1",
+    "gpt-4o",
+    "gpt-4o-mini",
+    "gpt-5-nano",
+]
 
 def _init_state():
     import streamlit as st
@@ -24,17 +31,13 @@ def _init_state():
         st.session_state.konf_file_id = ""
     if "konf_output" not in st.session_state:
         st.session_state.konf_output = ""
-    if "golf_df" not in st.session_state:
-        st.session_state.golf_df = pd.DataFrame({
-            "Hole": list(range(1, 7)),
-            "Par": [4,4,5,3,4,5],
-            "Hcp": [9,7,11,15,13,17]
-        })
     # Track uploads to avoid re-processing on every rerun
     if "konf_uploaded_name" not in st.session_state:
         st.session_state.konf_uploaded_name = ""
     if "konf_preprocess" not in st.session_state:
         st.session_state.konf_preprocess = True
+    if "konf_upload_model" not in st.session_state:
+        st.session_state.konf_upload_model = UPLOAD_MODEL_OPTIONS[0]
     if "konf_round_date" not in st.session_state:
         st.session_state.konf_round_date = date.today()
     for _player in ROUND_PLAYERS:
@@ -156,127 +159,162 @@ def render(st):
 
     # Option: Preprocess vor Upload
     st.checkbox("Bild vor Upload vorverarbeiten (empfohlen)", key="konf_preprocess", value=st.session_state.get("konf_preprocess", True))
+    st.selectbox(
+        "AI Modell (Scorecard Upload)",
+        options=UPLOAD_MODEL_OPTIONS,
+        key="konf_upload_model",
+        index=UPLOAD_MODEL_OPTIONS.index(st.session_state.get("konf_upload_model", UPLOAD_MODEL_OPTIONS[0]))
+        if st.session_state.get("konf_upload_model", UPLOAD_MODEL_OPTIONS[0]) in UPLOAD_MODEL_OPTIONS else 0,
+    )
 
     # Knopf "Upload Scorecard" mit Dateiupload
     uploaded_file = st.file_uploader("Scorecard Datei auswählen", type=["jpg", "jpeg", "png"], key="konf_uploader")
     if uploaded_file is not None:
-        # Only process once per filename to avoid re-running on every rerun
-        if st.session_state.konf_uploaded_name != uploaded_file.name:
+        st.image(uploaded_file, caption=f"Upload Vorschau: {uploaded_file.name}", width='stretch')
+        # Expliziter Start: erlaubt erneute Verarbeitung auch mit identischem Dateinamen
+        if st.button("Scorecard an AI senden", key="konf_upload_process_btn"):
             file_path = f"{uploaded_file.name}"
             with open(file_path, "wb") as f:
                 f.write(uploaded_file.getbuffer())
             # Pass user choice for preprocessing
-            result = upload_scorecard_main(file_path, pre_process=st.session_state.get("konf_preprocess", True))
+            result = upload_scorecard_main(
+                file_path,
+                pre_process=st.session_state.get("konf_preprocess", True),
+                model_name=st.session_state.get("konf_upload_model", UPLOAD_MODEL_OPTIONS[0]),
+            )
             st.session_state.konf_output = result
             st.session_state.konf_file_id = result  # Store returned file_id
             st.session_state.konf_uploaded_name = uploaded_file.name
-            print("uploaded file processed once")
-        else:
-            # Skip re-processing; file already handled
-            pass
+            st.success(f"Upload verarbeitet mit Modell: {st.session_state.get('konf_upload_model', UPLOAD_MODEL_OPTIONS[0])}")
 
-    # Editierbare Tabelle für Par, Hcp und Scores aller Spieler
+    # Dropdown-Editor für Par, Hcp und Scores aller Spieler
     with open("json/golf_df/golf_df.json", "r", encoding="utf-8") as f:
         golf_data = json.load(f)
     key = list(golf_data.keys())[0]
     data = golf_data[key]
-    # Build DataFrame for editing (remove index column; use explicit 'Spieler' column; no 'Score ' prefixes)
-    # First two rows: Par, Hcp
-    edit_rows = [["Par"] + data["Par"], ["Hcp"] + data["Hcp"]]
-    # Next: one row per player with their scores
-    for player, pdata in data["Spieler"].items():
-        edit_rows.append([player] + pdata.get("Score", []))
-    # Prepare columns: Spieler + 18 holes + 3 extra columns for LD, N2TP, Ladies
-    columns = ["Spieler"] + [f"{i+1}" for i in range(18)] + ["LD", "N2TP", "Ladies"]
-    # Append LD, N2TP, Ladies values for each player row
-    for idx, player in enumerate(data["Spieler"].keys()):
-        row_idx = 2 + idx
-        pdata = data["Spieler"][player]
-        # Ensure row length before extending
-        while len(edit_rows[row_idx]) < 1 + 18:
-            edit_rows[row_idx].append(None)
-        edit_rows[row_idx] += [pdata.get("LD", None), pdata.get("N2TP", None), pdata.get("Ladies", None)]
-    # Pad all rows to full length
-    for r in edit_rows:
-        while len(r) < len(columns):
-            r.append(None)
-    edit_df = pd.DataFrame(edit_rows, columns=columns)
-    text15("Scorecard Tabelle")
-    # Configure editor: hide index, pin Spieler column to the left (if supported), narrow widths
-    col_cfg = {col: {"width": "small"} for col in edit_df.columns}
-    # Try to pin the Spieler column to the left; if unsupported, it's simply ignored
-    col_cfg["Spieler"]["pinned"] = "left"
+    text15("Scorecard Eingabe (Dropdowns)")
 
-    # Helper: mark editor changes without triggering heavy computations
-    def _mark_golf_df_dirty():
-        st.session_state["golf_df_dirty"] = True
+    PAR_OPTIONS = [3, 4, 5]
+    HCP_OPTIONS = list(range(1, 19))
+    SCORE_OPTIONS = [None] + list(range(1, 11))
 
-    st.session_state.golf_df = st.data_editor(
-        edit_df,
-        key="golf_df_editor_full",
-        width='stretch',
-        hide_index=True,
-        column_config=col_cfg,
-        on_change=_mark_golf_df_dirty,
+    def _norm_list(vals, fill=None):
+        out = list(vals or [])
+        while len(out) < 18:
+            out.append(fill)
+        return out[:18]
+
+    def _coerce_for_options(value, options):
+        if value in options:
+            return value
+        if value is None:
+            return options[0]
+        try:
+            iv = int(value)
+            if iv in options:
+                return iv
+        except Exception:
+            pass
+        return options[0]
+
+    def _draw_score_section(container, section_title: str, start_idx: int, end_idx: int,
+                            par_values: list, hcp_values: list, player_values: dict):
+        container.markdown(f"**{section_title}**")
+
+        # Header row (holes)
+        header_cols = container.columns([1.8] + [1] * 9)
+        header_cols[0].markdown("&nbsp;", unsafe_allow_html=True)
+        for c, hole_idx in enumerate(range(start_idx, end_idx), start=1):
+            header_cols[c].markdown(f"<b>{hole_idx + 1}</b>", unsafe_allow_html=True)
+
+        def _draw_row(row_label: str, key_prefix: str, values: list, options: list):
+            cols = container.columns([1.8] + [1] * 9)
+            cols[0].markdown(f"<b>{row_label}</b>", unsafe_allow_html=True)
+            picked = []
+            norm_values = _norm_list(values)
+            for c, hole_idx in enumerate(range(start_idx, end_idx), start=1):
+                v = _coerce_for_options(norm_values[hole_idx], options)
+                idx = options.index(v) if v in options else 0
+                picked.append(cols[c].selectbox(
+                    f"{row_label} {hole_idx+1}",
+                    options=options,
+                    index=idx,
+                    key=f"{key_prefix}_{hole_idx+1}",
+                    format_func=(lambda x: "" if x is None else str(x)),
+                    label_visibility="collapsed",
+                ))
+            return picked
+
+        section_par = _draw_row("PAR", "konf_par", par_values, PAR_OPTIONS)
+        section_hcp = _draw_row("HCP", "konf_hcp", hcp_values, HCP_OPTIONS)
+
+        section_scores = {}
+        for player_name, score_vals in player_values.items():
+            section_scores[player_name] = _draw_row(player_name, f"konf_score_{player_name}", score_vals, SCORE_OPTIONS)
+
+        return section_par, section_hcp, section_scores
+
+    current_par = _norm_list(data.get("Par", []))
+    current_hcp = _norm_list(data.get("Hcp", []))
+    players_present = list(data.get("Spieler", {}).keys())
+    current_scores = {
+        player: _norm_list(data["Spieler"].get(player, {}).get("Score", []))
+        for player in players_present
+    }
+
+    new_par = list(current_par)
+    new_hcp = list(current_hcp)
+    new_scores = {player: list(vals) for player, vals in current_scores.items()}
+
+    left_par, left_hcp, left_scores = _draw_score_section(
+        st, "Löcher 1-9", 0, 9, current_par, current_hcp, current_scores
+    )
+    right_par, right_hcp, right_scores = _draw_score_section(
+        st, "Löcher 10-18", 9, 18, current_par, current_hcp, current_scores
     )
 
-    # Knopf zum Speichern der Tabelle ins JSON
-    if st.button("Tabelle speichern"):
-        edited_df = st.session_state.golf_df
-        def nan_to_null_int(val):
-            if pd.isna(val):
-                return None
-            try:
-                return int(val)
-            except (ValueError, TypeError):
-                return None
-        new_par = [nan_to_null_int(edited_df.iloc[0, i]) for i in range(1, 19)]
-        new_hcp = [nan_to_null_int(edited_df.iloc[1, i]) for i in range(1, 19)]
-        new_scores = {}
-        new_ld = {}
-        new_n2tp = {}
-        new_ladies = {}
-        # Only process player rows (skip Par/Hcp)
-        for idx in range(2, edited_df.shape[0]):
-            row = edited_df.iloc[idx]
-            player = str(row.iloc[0]).strip()
-            scores = [nan_to_null_int(row.iloc[i]) for i in range(1, 19)]
-            ld = nan_to_null_int(row.iloc[19])
-            n2tp = nan_to_null_int(row.iloc[20])
-            ladies = nan_to_null_int(row.iloc[21])
-            new_scores[player] = scores
-            new_ld[player] = ld
-            new_n2tp[player] = n2tp
-            new_ladies[player] = ladies
-        with open("json/golf_df/golf_df.json", "r", encoding="utf-8") as f:
-            golf_data = json.load(f)
-        key = list(golf_data.keys())[0]
-        data = golf_data[key]
+    for i in range(9):
+        new_par[i] = left_par[i]
+        new_hcp[i] = left_hcp[i]
+        new_par[i + 9] = right_par[i]
+        new_hcp[i + 9] = right_hcp[i]
+
+    for player in players_present:
+        left_vals = left_scores.get(player, [None] * 9)
+        right_vals = right_scores.get(player, [None] * 9)
+        for i in range(9):
+            new_scores[player][i] = left_vals[i]
+            new_scores[player][i + 9] = right_vals[i]
+
+    # Auto-save: direkt speichern, sobald ein Dropdown-Wert geändert wurde
+    needs_save = (new_par != current_par) or (new_hcp != current_hcp)
+    if not needs_save:
+        for player in players_present:
+            if new_scores.get(player, []) != current_scores.get(player, []):
+                needs_save = True
+                break
+
+    if needs_save:
         data["Par"] = new_par
         data["Hcp"] = new_hcp
-        # Ort aktualisieren falls Eingabe vorhanden
-        _platz_eingabe = st.session_state.get("konf_platzname", "").strip()
-        if _platz_eingabe:
-            data["Ort"] = _platz_eingabe
-        for player in data["Spieler"]:
+        for player in data.get("Spieler", {}):
             if player in new_scores:
                 data["Spieler"][player]["Score"] = new_scores[player]
-            if player in new_ld:
-                data["Spieler"][player]["LD"] = new_ld[player]
-            if player in new_n2tp:
-                data["Spieler"][player]["N2TP"] = new_n2tp[player]
-            if player in new_ladies:
-                data["Spieler"][player]["Ladies"] = new_ladies[player]
             # Flight Werte aus den Eingabefeldern übernehmen
             flight_state_key = f"flight_{player}"
             flight_val = st.session_state.get(flight_state_key, "")
             if isinstance(flight_val, str):
                 flight_val = flight_val.strip()
             data["Spieler"][player]["Flight"] = flight_val if flight_val else None
+
+        # Ort aktualisieren falls Eingabe vorhanden
+        _platz_eingabe = st.session_state.get("konf_platzname", "").strip()
+        if _platz_eingabe:
+            data["Ort"] = _platz_eingabe
+
         with open("json/golf_df/golf_df.json", "w", encoding="utf-8") as f:
             json.dump(golf_data, f, ensure_ascii=False, indent=2)
-        st.session_state["golf_df_dirty"] = False
-        st.success("Tabelle erfolgreich gespeichert (inkl. Ort & Flight)!")
+        st.success("Änderung gespeichert.")
 
     # Separate heavy computation button
     if st.button("Berechne den Tag"):
