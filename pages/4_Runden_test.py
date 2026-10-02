@@ -322,6 +322,38 @@ def render(st_obj):
             .rt-table th, .rt-table td, .sc-table th, .sc-table td {
                 color: #111 !important;
             }
+            .sc-table {
+                table-layout: fixed !important;
+                width: 100% !important;
+            }
+            .sc-table th,
+            .sc-table td {
+                padding: 0.06rem 0.08rem !important;
+                font-size: 8px !important;
+            }
+            .sc-table td.left,
+            .sc-table th:first-child {
+                width: 11% !important;
+                min-width: 11% !important;
+                max-width: 11% !important;
+                white-space: nowrap !important;
+                overflow: hidden !important;
+                text-overflow: ellipsis !important;
+            }
+            .sc-table th.hole-col,
+            .sc-table td:not(:first-child):not(.sum-col):not(:last-child) {
+                width: 3.6% !important;
+                min-width: 3.6% !important;
+                max-width: 3.6% !important;
+            }
+            .sc-table th.sum-col,
+            .sc-table td.sum-col,
+            .sc-table th:last-child,
+            .sc-table td:last-child {
+                width: 4.5% !important;
+                min-width: 4.5% !important;
+                max-width: 4.5% !important;
+            }
         }
         </style>
         """,
