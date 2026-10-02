@@ -360,7 +360,7 @@ def render(st_obj):
         }
         @media (max-width: 900px) and (orientation: landscape) {
             .rt-table th, .rt-table td, .sc-table th, .sc-table td {
-                font-size: 12px !important;
+                font-size: 14px !important;
             }
             .sc-table th,
             .sc-table td {
