@@ -239,7 +239,7 @@ def render(st_obj):
         [data-testid='stMarkdownContainer'] span,
         h1, h2, h3, h4, h5, h6,
         [data-testid='stHeader'] h1 {
-            font-size: 15px !important;
+            font-size: 17px !important;
         }
         .rt-table, .sc-table {
             border-collapse: collapse;
@@ -256,7 +256,7 @@ def render(st_obj):
             border: 1px solid #d5d5d5;
             padding: 0.12rem 0.16rem;
             text-align: center;
-            font-size: 10px;
+            font-size: 13px;
             line-height: 1.1;
             color: #111;
             background: #fff;
@@ -331,7 +331,7 @@ def render(st_obj):
             .sc-table th,
             .sc-table td {
                 padding: 0.06rem 0.08rem !important;
-                font-size: 8px !important;
+                font-size: 9px !important;
                 box-sizing: border-box !important;
             }
             .sc-table td.left,
@@ -356,6 +356,15 @@ def render(st_obj):
                 width: 5.866% !important;
                 min-width: 5.866% !important;
                 max-width: 5.866% !important;
+            }
+        }
+        @media (max-width: 900px) and (orientation: landscape) {
+            .rt-table th, .rt-table td, .sc-table th, .sc-table td {
+                font-size: 10px !important;
+            }
+            .sc-table th,
+            .sc-table td {
+                padding: 0.08rem 0.10rem !important;
             }
         }
         </style>
