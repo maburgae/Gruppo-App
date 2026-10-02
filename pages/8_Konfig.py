@@ -4,6 +4,7 @@ import os
 import base64
 import requests
 import subprocess  # für Bulk Git Commit
+from datetime import date
 
 from actions.neue_runde import main as neue_runde_main
 from actions.upload_scorecard import main as upload_scorecard_main
@@ -13,11 +14,12 @@ from actions.erzeuge_stats import main as erzeuge_stats_main
 import os
 
 DEFAULT_PLAYERS_STR = '["Marc","Andy","Bernie","Jens","Heiko","Markus","Buffy"]'
+ROUND_PLAYERS = ["Marc", "Andy", "Bernie", "Jens", "Markus", "Buffy"]
 
 def _init_state():
     import streamlit as st
     if "konf_players" not in st.session_state:
-        st.session_state.konf_players = DEFAULT_PLAYERS_STR
+        st.session_state.konf_players = json.dumps(ROUND_PLAYERS, ensure_ascii=False)
     if "konf_file_id" not in st.session_state:
         st.session_state.konf_file_id = ""
     if "konf_output" not in st.session_state:
@@ -33,6 +35,17 @@ def _init_state():
         st.session_state.konf_uploaded_name = ""
     if "konf_preprocess" not in st.session_state:
         st.session_state.konf_preprocess = True
+    if "konf_round_date" not in st.session_state:
+        st.session_state.konf_round_date = date.today()
+    for _player in ROUND_PLAYERS:
+        check_key = f"konf_player_{_player}"
+        if check_key not in st.session_state:
+            st.session_state[check_key] = True
+        flight_key = f"flight_{_player}"
+        if flight_key not in st.session_state:
+            st.session_state[flight_key] = "1"
+        elif st.session_state[flight_key] not in ("1", "2"):
+            st.session_state[flight_key] = "1"
 
 
 def render(st):
@@ -52,6 +65,12 @@ def render(st):
         .stSelectbox label,
         .stFileUploader label {
             font-size: 15px !important;
+        }
+        .compact-player-grid div[data-testid='stCheckbox'] {
+            margin-bottom: 0.1rem !important;
+        }
+        .compact-player-grid div[data-testid='stSelectbox'] {
+            margin-top: -0.2rem !important;
         }
         </style>
         """,
@@ -97,12 +116,6 @@ def render(st):
             st.session_state["konf_platzname_val"] = existing_ort
             st.session_state["konf_platzname"] = existing_ort
 
-    # Eingabefeld "Spieler"
-    st.text_input(
-        "Spieler (JSON-Liste)",
-        value=st.session_state.get("konf_players", DEFAULT_PLAYERS_STR),
-        key="konf_players",
-    )
     # Eingabefeld Platzname (voreingestellt mit vorhandenem Ort)
     platzname = st.text_input(
         "Platzname",
@@ -111,44 +124,34 @@ def render(st):
     )
     st.session_state["konf_platzname_val"] = platzname
 
-    # Dynamische Flight-Eingaben unter Neue Runde
+    # Datum für die neue Runde (default: heute, aber änderbar)
+    round_date = st.date_input("Datum", key="konf_round_date")
+
+    # Feste Spielerauswahl mit Flight-Dropdown je Spieler
+    st.markdown("**Spieler**")
     flight_values = {}
-    existing_flights = {}
-    try:
-        with open("json/golf_df/golf_df.json", "r", encoding="utf-8") as _gf:
-            _golf_existing = json.load(_gf)
-        if isinstance(_golf_existing, dict) and len(_golf_existing) > 0:
-            _date_key_exist = next(iter(_golf_existing.keys()))
-            _round_exist = _golf_existing[_date_key_exist]
-            for _p, _pdata in _round_exist.get("Spieler", {}).items():
-                existing_flights[_p] = _pdata.get("Flight")
-    except Exception:
-        pass
-    try:
-        _player_list = json.loads(st.session_state.konf_players)
-        if isinstance(_player_list, list):
-            st.markdown("**Flights (optional)**")
-            cols = st.columns(min(7, max(1, len(_player_list))))
-            for idx, pname in enumerate(_player_list):
-                col = cols[idx % len(cols)]
-                state_key = f"flight_{pname}"
-                if state_key not in st.session_state:
-                    existing_val = existing_flights.get(pname)
-                    st.session_state[state_key] = "" if existing_val in (None, "None") else str(existing_val)
-                flight_values[pname] = col.text_input(f"{pname}", key=state_key)
-    except Exception:
-        _player_list = []
+    selected_players = []
+    st.markdown("<div class='compact-player-grid'>", unsafe_allow_html=True)
+    player_cols = st.columns(len(ROUND_PLAYERS), gap="small")
+    for col, pname in zip(player_cols, ROUND_PLAYERS):
+        checked = col.checkbox(pname, key=f"konf_player_{pname}")
+        col.selectbox("Flight", options=["1", "2"], key=f"flight_{pname}")
+        if checked:
+            selected_players.append(pname)
+            flight_values[pname] = st.session_state.get(f"flight_{pname}", "1")
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    # Kompatibel halten: JSON-String aus den gecheckten Spielern bauen
+    st.session_state.konf_players = json.dumps(selected_players, ensure_ascii=False)
+    st.caption(f"Spieler JSON: {st.session_state.konf_players}")
 
     # Knopf "Neue Runde"
     if st.button("Neue Runde"):
-        try:
-            players = json.loads(st.session_state.konf_players)
-            if not isinstance(players, list):
-                raise ValueError("Spieler muss eine JSON-Liste sein.")
-        except Exception as e:
-            st.session_state.konf_output = f"Fehler: Ungültiges Spieler-Format: {e}"
+        if len(selected_players) == 0:
+            st.session_state.konf_output = "Fehler: Bitte mindestens einen Spieler auswählen."
         else:
-            result = neue_runde_main(players, flights=flight_values, ort=platzname.strip())
+            date_key = round_date.strftime("%d.%m.%Y")
+            result = neue_runde_main(selected_players, flights=flight_values, ort=platzname.strip(), round_date=date_key)
             st.session_state.konf_output = result
 
     # Option: Preprocess vor Upload

@@ -1,13 +1,19 @@
 import json
 from datetime import date, datetime
 
-def main(players: list[str] | None = None, flights: dict[str, str] | None = None, ort: str = "Platzname") -> str:
+def main(
+    players: list[str] | None = None,
+    flights: dict[str, str] | None = None,
+    ort: str = "Platzname",
+    round_date: str | None = None,
+) -> str:
     """Startet eine neue Runde. Optional können pro Spieler Flight-Werte übergeben werden.
 
     Args:
         players: Liste der Spielernamen.
         flights: Mapping Spieler -> Flight (String). Leere Strings werden als None gespeichert.
         ort: Platzname, wird unter 'Ort' gespeichert.
+        round_date: Datumsschlüssel im Format DD.MM.YYYY. Wenn leer, wird heute verwendet.
     """
     if players is None:
         players = []
@@ -62,11 +68,11 @@ def main(players: list[str] | None = None, flights: dict[str, str] | None = None
             "Score": [None]*18,
             "NettoP": [None]*18
         }
-    today = datetime.now().strftime("%d.%m.%Y")
-    out = {today: round_data}
+    date_key = (round_date or "").strip() or datetime.now().strftime("%d.%m.%Y")
+    out = {date_key: round_data}
 
     with open(json_path, "w", encoding="utf-8") as f:
         json.dump(out, f, ensure_ascii=False, indent=2)
     print(f"Default golf JSON written to {json_path}")
 
-    return f"Neue Runde gestartet ({ort}). Spieler: {players}. Flights: {flights}"
+    return f"Neue Runde gestartet am {date_key} ({ort}). Spieler: {players}. Flights: {flights}"
