@@ -29,7 +29,7 @@ def _score_bg(score, par):
         return "#ffe08a"
     if score > par + 2:
         return "#ff9a9a"
-    return "white"
+    return "#ffffff"
 
 
 def _netto_style(netto):
@@ -177,7 +177,7 @@ def _render_scorecard_html(round_data):
             par = _safe_int(pars[hole_idx])
             bg = _score_bg(sc, par)
             txt = "x" if scores[hole_idx] in (None, 0) else _fmt_cell(scores[hole_idx])
-            html.append(f"<td style='background:{bg};font-weight:700'>{escape(txt)}</td>")
+            html.append(f"<td style='background:{bg};color:#111;font-weight:700'>{escape(txt)}</td>")
             if sc is not None:
                 front_sum += sc
                 front_has = True
@@ -187,7 +187,7 @@ def _render_scorecard_html(round_data):
             par = _safe_int(pars[hole_idx])
             bg = _score_bg(sc, par)
             txt = "x" if scores[hole_idx] in (None, 0) else _fmt_cell(scores[hole_idx])
-            html.append(f"<td style='background:{bg};font-weight:700'>{escape(txt)}</td>")
+            html.append(f"<td style='background:{bg};color:#111;font-weight:700'>{escape(txt)}</td>")
             if sc is not None:
                 back_sum += sc
                 back_has = True
@@ -258,6 +258,8 @@ def render(st_obj):
             text-align: center;
             font-size: 10px;
             line-height: 1.1;
+            color: #111;
+            background: #fff;
         }
         .rt-table th, .sc-table th {
             background: #f2f2f2;
@@ -315,6 +317,11 @@ def render(st_obj):
             height: 0.35rem;
             padding: 0;
             background: transparent;
+        }
+        @media (max-width: 900px) {
+            .rt-table th, .rt-table td, .sc-table th, .sc-table td {
+                color: #111 !important;
+            }
         }
         </style>
         """,
