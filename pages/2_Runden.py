@@ -106,6 +106,14 @@ def _render_scorecard_html(round_data):
     while len(hcps) < 18:
         hcps.append(None)
 
+    course_par_total = 0
+    course_par_has = False
+    for p in pars[:18]:
+        pv = _safe_int(p)
+        if pv is not None:
+            course_par_total += pv
+            course_par_has = True
+
     html = []
     html.append("<table class='sc-table'>")
     html.append("<thead><tr><th></th>")
@@ -191,10 +199,10 @@ def _render_scorecard_html(round_data):
             if sc is not None:
                 back_sum += sc
                 back_has = True
-        total_sum = (front_sum if front_has else 0) + (back_sum if back_has else 0)
-        total_has = front_has or back_has
+        gesp_hcp = _safe_int(pdata.get("Gesp.Hcp"))
+        total_target = (gesp_hcp + course_par_total) if (gesp_hcp is not None and course_par_has) else None
         html.append(f"<td class='sum-col' style='font-weight:700'>{escape(_fmt_cell(back_sum if back_has else None))}</td>")
-        html.append(f"<td class='sum-col' style='font-weight:700'>{escape(_fmt_cell(total_sum if total_has else None))}</td></tr>")
+        html.append(f"<td class='sum-col' style='font-weight:700'>{escape(_fmt_cell(total_target))}</td></tr>")
 
         html.append("<tr>")
         html.append("<td class='left netto'>Netto</td>")
