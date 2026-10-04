@@ -93,7 +93,7 @@ def render(st):
             n_bens = len(bens) if len(bens) > 0 else 1
             share = amt / n_bens
             payer_name = e.get("payer", "")
-            row_label = f"{payer_name} {e.get('description','').strip()} ({amt:.2f})".strip()
+            row_label = f"{payer_name} {":"} {e.get('description','').strip()} ({amt:.2f})".strip()
             row_dict = {"Ausgabe": row_label}
             for p in players:
                 val = 0.0
