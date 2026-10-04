@@ -47,7 +47,7 @@ def _netto_style(netto):
 
 
 def _render_ranking_html(players):
-    cols = ["P", "Name", "Net", "G.Hcp", "Bird", "Par", "Bog.", "Str.", "Geld", "L", "LD", "N2"]
+    cols = ["P", "Name", "Net", "Hcp", "Bird", "Par", "Bog.", "Str.", "Geld", "L", "LD", "N2"]
 
     rows = []
     for name, pdata in players.items():
@@ -256,10 +256,53 @@ def render(st_obj):
             border: 1px solid #d5d5d5;
             padding: 0.12rem 0.16rem;
             text-align: center;
-            font-size: 17px;
             line-height: 1.1;
             color: #111;
             background: #fff;
+        }
+        .rt-table th,
+        .rt-table td {
+            font-size: 17px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .rt-table th:nth-child(2),
+        .rt-table td:nth-child(2) {
+            width: 10%;
+            min-width: 10%;
+            max-width: 10%;
+            text-align: left;
+        }
+        .rt-table th:nth-child(1),
+        .rt-table td:nth-child(1),
+        .rt-table th:nth-child(3),
+        .rt-table td:nth-child(3),
+        .rt-table th:nth-child(4),
+        .rt-table td:nth-child(4),
+        .rt-table th:nth-child(10),
+        .rt-table td:nth-child(10),
+        .rt-table th:nth-child(11),
+        .rt-table td:nth-child(11),
+        .rt-table th:nth-child(12),
+        .rt-table td:nth-child(12) {
+            width: 6.5%;
+        }
+        .rt-table th:nth-child(5),
+        .rt-table td:nth-child(5),
+        .rt-table th:nth-child(6),
+        .rt-table td:nth-child(6),
+        .rt-table th:nth-child(7),
+        .rt-table td:nth-child(7),
+        .rt-table th:nth-child(8),
+        .rt-table td:nth-child(8),
+        .rt-table th:nth-child(9),
+        .rt-table td:nth-child(9) {
+            width: 7.4%;
+        }
+        .sc-table th,
+        .sc-table td {
+            font-size: 17px;
         }
         .rt-table th, .sc-table th {
             background: #f2f2f2;
@@ -322,6 +365,17 @@ def render(st_obj):
             .rt-table th, .rt-table td, .sc-table th, .sc-table td {
                 color: #111 !important;
             }
+            .rt-table th,
+            .rt-table td {
+                font-size: clamp(9px, 2.6vw, 13px) !important;
+                padding: 0.08rem 0.10rem !important;
+            }
+            .rt-table th:nth-child(2),
+            .rt-table td:nth-child(2) {
+                width: 10% !important;
+                min-width: 10% !important;
+                max-width: 10% !important;
+            }
             .sc-table {
                 table-layout: fixed !important;
                 width: 100% !important;
@@ -371,8 +425,6 @@ def render(st_obj):
         """,
         unsafe_allow_html=True,
     )
-
-    st_obj.markdown("<span style='font-size:15px'><b>Runden</b></span>", unsafe_allow_html=True)
 
     json_path = "json/allrounds.json"
     try:

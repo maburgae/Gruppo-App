@@ -60,7 +60,7 @@ def make_ranking_table(players: dict, save_path: str | None = None, show: bool =
         except Exception:
             geld_val = None
         if geld_val is not None and geld_val != 0 and _no_score(pdata):
-            # Format: Platz, Name, Net, G.Hcp, Bird, Par, Bog., Strich, Geld, L, LD, N2
+            # Format: Platz, Name, Net, Hcp, Bird, Par, Bog., Strich, Geld, L, LD, N2
             n_s_rows.append([
                 "n/s",
                 name,

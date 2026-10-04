@@ -23,7 +23,7 @@ from DayHcp import calc_dayhcps_for_players_before_date
 # image_path = "IMG_0060.jpg"     # file-8mmR171eCLG3PjorUVjMgD Buffy Marc Jens Bernie
 
 # Set model type
-gpt_model = "gpt-5-mini"  # Vision-capable model
+gpt_model = "gpt-5.6-sol"  # Vision-capable model
 
 # Login to iCloud and download scorecards
 # api = login("marc@burgaezi.de")

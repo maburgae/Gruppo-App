@@ -6,7 +6,7 @@ import uuid  # hinzugefügt für eindeutige IDs
 
 EXPENSE_FILE = "json/abrechnung.json"
 
-DEFAULT_PLAYERS = ["Marc","Andy","Bernie","Jens","Heiko","Markus","Buffy"]
+DEFAULT_PLAYERS = ["Marc","Andy","Bernie","Jens","Markus","Buffy"]
 
 STYLE_CSS = """
 <style>
