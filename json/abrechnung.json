@@ -1,1 +1,46 @@
-[]
+[
+  {
+    "id": "69ead5fc-91de-4c55-8acd-ef7e814de776",
+    "timestamp": "2026-10-04 11:54:04",
+    "payer": "Marc",
+    "beneficiaries": [
+      "Bernie",
+      "Buffy",
+      "Jens",
+      "Marc",
+      "Markus"
+    ],
+    "amount": 480.0,
+    "description": "Alhaurin GF"
+  },
+  {
+    "id": "5f826454-e193-4304-ab89-dbe0878e2840",
+    "timestamp": "2026-10-04 11:54:51",
+    "payer": "Marc",
+    "beneficiaries": [
+      "Andy",
+      "Bernie",
+      "Buffy",
+      "Jens",
+      "Marc",
+      "Markus"
+    ],
+    "amount": 759.0,
+    "description": "Higueron GF"
+  },
+  {
+    "id": "e97e39c2-a9a5-4e3e-9996-f0558e0b083d",
+    "timestamp": "2026-10-04 11:55:13",
+    "payer": "Marc",
+    "beneficiaries": [
+      "Andy",
+      "Bernie",
+      "Buffy",
+      "Jens",
+      "Marc",
+      "Markus"
+    ],
+    "amount": 1155.0,
+    "description": "Santa Clara GF"
+  }
+]

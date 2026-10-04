@@ -487,6 +487,15 @@ def render(st):
             str(totals_pars[p]),
             str(totals_bogies[p]),
         ])
+
+    abs_rows.append([
+        "Total",
+        str(sum(totals_ladies.values())),
+        str(sum(totals_birdies.values())),
+        str(sum(totals_pars.values())),
+        str(sum(totals_bogies.values())),
+    ])
+
     display_table(["Spieler", "Ladies", "Birdies", "Pars", "Bogies"], abs_rows, "Absolut: Ladies, Birdies, Pars, Bogies")
 
 if __name__ == "__main__":
