@@ -13,7 +13,7 @@ def render(st):
         [data-testid='stMarkdownContainer'] span,
         h1, h2, h3, h4, h5, h6,
         [data-testid='stHeader'] h1 {
-            font-size: 17px !important;
+            font-size: 15px !important;
         }
         </style>
         """,
@@ -36,7 +36,7 @@ def render(st):
             border: 1px solid #d5d5d5;
             padding: 0.12rem 0.16rem;
             text-align: center;
-            font-size: 17px;
+            font-size: 15px;
             line-height: 1.1;
             color: #111;
             background: #fff;
@@ -201,6 +201,14 @@ def render(st):
         if netto >= 3:
             return "color:#178a2f;font-weight:700;"
         return "color:#111;font-weight:700;"
+
+    def _has_played_round(pdata) -> bool:
+        if not isinstance(pdata, dict):
+            return False
+        score = pdata.get("Score")
+        if not isinstance(score, list):
+            return False
+        return any(isinstance(v, (int, float)) for v in score)
 
     def _render_scorecard_html(round_data):
         holes = list(range(1, 19))
@@ -410,6 +418,22 @@ def render(st):
         st.info("Keine Runden für das gewählte Jahr.")
         return
 
+    # Teilnehmerliste: nur Spieler mit tatsächlicher Teilnahme (numerischer Score) im gewählten Jahr
+    participants_set = set()
+    for _, obj in rounds_for_year:
+        sp = obj.get("Spieler", {}) or {}
+        for pname, pdata in sp.items():
+            if _has_played_round(pdata):
+                participants_set.add(pname)
+
+    # Erst bevorzugte Reihenfolge, dann weitere Teilnehmer alphabetisch
+    year_players = [p for p in selected_players if p in participants_set]
+    year_players.extend(sorted(participants_set - set(selected_players)))
+
+    if not year_players:
+        st.info("Keine teilnehmenden Spieler für das gewählte Jahr gefunden.")
+        return
+
     # 1) Gespieltes Hcp der Spieler über dem Datum der Runden in diesem Jahr
     # Build table rows: each row starts with date, then Gesp.Hcp per player (or '-')
     rows = []
@@ -417,22 +441,22 @@ def render(st):
         date_fmt = datetime.strptime(d, "%d.%m.%Y").strftime("%d.%m")
         sp = obj.get("Spieler", {})
         row = [date_fmt]
-        for p in selected_players:
+        for p in year_players:
             h = sp.get(p, {}).get("Gesp.Hcp")
             row.append(h if isinstance(h, int) else "-")
         rows.append(row)
-    display_table(["Datum"] + selected_players, rows, "Gespieltes Hcp je Runde")
+    display_table(["Datum"] + year_players, rows, "Gespieltes Hcp je Runde")
 
     # 2) Gesp.Hcp Übersicht (nur Runden im Jahr)
-    player_hcps = {p: [] for p in selected_players}
+    player_hcps = {p: [] for p in year_players}
     for _, obj in rounds_for_year:
         sp = obj.get("Spieler", {})
-        for p in selected_players:
+        for p in year_players:
             h = sp.get(p, {}).get("Gesp.Hcp")
             if isinstance(h, int):
                 player_hcps[p].append(h)
     rows = []
-    for p in selected_players:
+    for p in year_players:
         vals = player_hcps[p]
         if vals:
             avg = sum(vals) / len(vals)
@@ -443,18 +467,18 @@ def render(st):
 
     # 3) Durchschnittswerte pro Runde (Birdies/Pars/Bogies/Strich) – nur Jahr
     def yearly_avgs_for(stat_key: str) -> dict:
-        counts = {p: 0 for p in selected_players}
-        rounds = {p: 0 for p in selected_players}
+        counts = {p: 0 for p in year_players}
+        rounds = {p: 0 for p in year_players}
         for _, obj in rounds_for_year:
             sp = obj.get("Spieler", {})
-            for p in selected_players:
+            for p in year_players:
                 val = sp.get(p, {}).get(stat_key)
                 if isinstance(val, int):
                     counts[p] += val
                     rounds[p] += 1
                 elif val is not None:
                     rounds[p] += 1
-        return {p: (counts[p] / rounds[p] if rounds[p] else 0.0) for p in selected_players}
+        return {p: (counts[p] / rounds[p] if rounds[p] else 0.0) for p in year_players}
 
     bird = yearly_avgs_for("Birdies")
     pars = yearly_avgs_for("Pars")
@@ -462,22 +486,12 @@ def render(st):
     stri = yearly_avgs_for("Strich")
 
     rows = []
-    for p in selected_players:
+    for p in year_players:
         rows.append([p, f"{bird[p]:.2f}", f"{pars[p]:.2f}", f"{bog[p]:.2f}", f"{stri[p]:.2f}"])
     display_table(["Spieler", "Birdies/R", "Pars/R", "Bogies/R", "Strich/R"], rows, "Durchschnittswerte pro Runde (Jahr)")
 
     # 4) Sonderwertungen Übersicht (Jahr) – LD %, N2TP %, Ladies/R und Gesamt
     import math
-    def is_present(v):
-        if v is None:
-            return False
-        if isinstance(v, (int, float)):
-            return not (isinstance(v, float) and math.isnan(v)) and v != 0
-        if isinstance(v, str):
-            return v.strip() != ""
-        if isinstance(v, bool):
-            return v
-        return False
 
     def to_points(v) -> float:
         if v is None:
@@ -492,19 +506,18 @@ def render(st):
             return 1.0 if v.strip() != "" else 0.0
         return 0.0
 
-    ld_points = {p: 0.0 for p in selected_players}
-    n2tp_points = {p: 0.0 for p in selected_players}
-    ladies_sums = {p: 0.0 for p in selected_players}
-    ladies_rounds_played = {p: 0 for p in selected_players}
+    ld_points = {p: 0.0 for p in year_players}
+    n2tp_points = {p: 0.0 for p in year_players}
+    ladies_sums = {p: 0.0 for p in year_players}
+    ladies_rounds_played = {p: 0 for p in year_players}
 
     for _, obj in rounds_for_year:
         sp = obj.get("Spieler", {})
-        for p in selected_players:
+        for p in year_players:
             pdata = sp.get(p, {})
             ld_points[p] += to_points(pdata.get("LD"))
             n2tp_points[p] += to_points(pdata.get("N2TP"))
-            score = pdata.get("Score")
-            played = isinstance(score, list) and len(score) > 0
+            played = _has_played_round(pdata)
             if played:
                 ladies_rounds_played[p] += 1
                 v = pdata.get("Ladies")
@@ -515,7 +528,7 @@ def render(st):
     total_n2tp_points = sum(n2tp_points.values()) or 1.0
 
     rows = []
-    for p in selected_players:
+    for p in year_players:
         ld_pct = 100.0 * ld_points[p] / total_ld_points
         n2tp_pct = 100.0 * n2tp_points[p] / total_n2tp_points
         ladies_pr = (ladies_sums[p] / ladies_rounds_played[p]) if ladies_rounds_played[p] else 0.0
@@ -524,10 +537,10 @@ def render(st):
     display_table(["Spieler", "LD %", "N2TP %", "Ladies/R", "L Ges."], rows, "Sonderwertungen Übersicht (Jahr)")
 
     # 5) Monetenkuchen (Jahr): Geld-Verteilung im Jahr
-    geld_sums = {p: 0.0 for p in selected_players}
+    geld_sums = {p: 0.0 for p in year_players}
     for _, obj in rounds_for_year:
         sp = obj.get("Spieler", {})
-        for p in selected_players:
+        for p in year_players:
             v = sp.get(p, {}).get("Geld")
             if isinstance(v, (int, float)) and not (isinstance(v, float) and math.isnan(v)):
                 geld_sums[p] += float(v)
@@ -546,7 +559,7 @@ def render(st):
     if total_geld <= 0:
         st.info("Keine Geld-Daten für dieses Jahr vorhanden.")
     else:
-        for p in selected_players:
+        for p in year_players:
             val = geld_sums[p]
             if val > 0:
                 labels.append(p)
