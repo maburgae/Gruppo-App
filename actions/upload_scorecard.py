@@ -38,7 +38,7 @@ def main(image_path: str | None = None, pre_process: bool = True, model_name: st
         "Follow this example structure EXACTLY:{\"Hole\": [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18], \"Par\": [5,4,4,4,4,3,4,3,5,5,4,4,3,5,4,4,3,4],\"Hcp\": [9,5,13,11,1,17,15,3,7,6,4,18,12,2,8,10,16,14],\"Bernie\": [7,6,6,4,6,5,4,8,0,null,6,6,7,null,null,5,7,9],\"Marc\": [7,6,6,4,6,5,4,8,0,null,6,6,7,null,null,5,7,9]}"
         "Follow the strategy to find the numbers:"
         "The hole numbers are in exactly ascending order: 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18. Search for this first. The PAR, Hcp and Scores will always be in the same direction like the Holes (vertically or horizontally)"
-        ""
+        "It is possible that you see only 9 holes, 1-9 or 10-18 on the picture. In this case only provide the content Hcp, Par and Scores for those holes."
     )
 
     now = datetime.now()
