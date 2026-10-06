@@ -24,15 +24,15 @@ Top-Level (pro Datumsschlüssel):
   "Spieler": {
       <Spielername>: {
           "Platz": <Integer | null>,  # Rang / Platzierung des Spielers in der Tageswertung
-          "Netto": <Integer | null>,  # Netto-Punkte oder Score (Definition projektspezifisch)
+          "Netto": <Integer | null>,  # Netto-Punkte
           "Geld": <Integer | null>,   # Vergebene Geld-/Bonus-Einheiten (berechnete Wertung)
-          "Gesp.Hcp": <Float|Int|null>, # Gespieltes Handicap / berechneter Wert für die Runde
-          "Birdies": <Integer | null>,
-          "Pars": <Integer | null>,
-          "Bogies": <Integer | null>,
+          "Gesp.Hcp": <Float|Int|null>, # Gespieltes Handicap über Par/ berechneter Wert für die Runde
+          "Birdies": <Integer | null>, # Anzahl Birdies
+          "Pars": <Integer | null>, # Anzahl Pars
+          "Bogies": <Integer | null>, # Anzahl Bogies
           "Strich": <Integer | null>, # Anzahl "Strich" (nicht gescorte Löcher / Ausfälle)
           "DayHcp": <Float|Int|null>, # Tages-Handicap vor Berechnung (Mittelwert der letzten 6 Runden)
-          "Ladies": <Integer | null>, # Sonderwertung "Ladies"
+          "Ladies": <Integer | null>, # Anzahl "Ladies"
           "N2TP": <Integer | null>,   # Sonderwertung Nearest to the Pin (1 = gewonnen, sonst null)
           "LD": <Integer | null>,     # Sonderwertung Longest Drive (1 = gewonnen, sonst null)
           "Flight": <String | null>,  # Zugeordneter Flight (Gruppierung)
