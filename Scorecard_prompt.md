@@ -259,26 +259,268 @@ Do not confuse Par with:
 Every Par value must be aligned with the correct hole.
 
 ============================================================
-HCP
+HCP / HANDICAP EXTRACTION — CRITICAL
 ============================================================
 
-Locate the row or column labelled:
+HCP extraction requires special care.
 
-- HCP
-- Hcp
-- Handicap
-- Stroke Index
-- SI
-- Index
-- or an equivalent golf term.
+The HCP values are often the numbers 1–18, usually appearing exactly once each.
 
-Extract the actual value for every visible hole.
+IMPORTANT:
 
-Do not assume a particular Hcp sequence.
+Do NOT determine the HCP array by recognizing the complete set of numbers and then reconstructing, sorting, or logically assigning them to holes.
 
-Use the values actually printed on the scorecard.
+The physical position of each HCP value on the scorecard MUST determine which hole it belongs to.
 
-Every Hcp value must be aligned with the correct hole.
+For every hole, independently trace the physical alignment from:
+
+HOLE NUMBER
+    ↓
+the corresponding hole column
+    ↓
+the HCP cell in that same column
+
+For example, if the scorecard visually contains:
+
+Hole:   1   2   3   4   5   6   7   8   9
+Hcp:   11  13  15   7  17   3   9   5   1
+
+then the result MUST be:
+
+"Hole": [1,2,3,4,5,6,7,8,9]
+"Hcp":  [11,13,15,7,17,3,9,5,1]
+
+NOT:
+
+"Hcp": [1,3,5,7,9,11,13,15,17]
+
+and NOT any other reordered sequence.
+
+------------------------------------------------------------
+PHYSICAL COLUMN ALIGNMENT
+------------------------------------------------------------
+
+The most important rule for HCP is:
+
+THE HCP VALUE BELONGS TO THE HOLE ABOVE/ALONGSIDE IT IN THE SAME TABLE COLUMN.
+
+Do not use the numerical value of HCP to determine its position.
+
+Do not assume that low HCP values occur early or late.
+
+Do not assume that HCP 1 belongs to hole 1.
+
+Do not sort HCP values.
+
+Do not reorder HCP values.
+
+Do not reconstruct the HCP row based on the fact that the values are normally 1–18.
+
+Read the actual physical position of each HCP number.
+
+------------------------------------------------------------
+COLUMN-BY-COLUMN MAPPING
+------------------------------------------------------------
+
+Internally perform the following operation:
+
+1. Locate hole 1.
+2. Identify the exact physical column or table position belonging to hole 1.
+3. Follow that same column downward/upward to the HCP row.
+4. Read the HCP value located there.
+5. Assign that value to hole 1.
+
+Then repeat independently:
+
+6. Locate hole 2.
+7. Follow its exact physical column to the HCP row.
+8. Read the HCP value there.
+9. Assign it to hole 2.
+
+Continue this process for every visible hole.
+
+Do NOT first read all HCP numbers and then attempt to match them afterward.
+
+The mapping must be based on physical table geometry.
+
+------------------------------------------------------------
+HORIZONTAL SCORECARD
+------------------------------------------------------------
+
+For a horizontal scorecard, think in terms of vertical alignment:
+
+             HOLE
+              ↓
+             1
+              │
+              │ SAME COLUMN
+              ↓
+             PAR
+              │
+              ↓
+             HCP
+              │
+              ↓
+          PLAYER SCORE
+
+For example:
+
+          column 1    column 2    column 3
+Hole          1          2           3
+Par           5          4           4
+Hcp          11         13          15
+Marc          6          5           4
+
+The correct mappings are:
+
+Hole 1 → Hcp 11
+Hole 2 → Hcp 13
+Hole 3 → Hcp 15
+
+------------------------------------------------------------
+DO NOT USE HCP VALUE AS A POSITION
+------------------------------------------------------------
+
+The HCP number itself does NOT tell you its array position.
+
+For example:
+
+If HCP 11 is physically located under hole 1,
+then:
+
+Hole 1 → Hcp 11
+
+even though 11 is normally associated with neither hole 1 nor any other particular position.
+
+Likewise:
+
+If HCP 3 is physically located under hole 6,
+then:
+
+Hole 6 → Hcp 3
+
+The number "3" does NOT mean that it belongs to hole 3.
+
+------------------------------------------------------------
+PERSPECTIVE AND SKEW
+------------------------------------------------------------
+
+If the photograph is taken at an angle, the physical columns may not be perfectly vertical in the image.
+
+Do NOT simply use the same x-coordinate for all rows.
+
+Instead, follow the table's perspective and grid lines.
+
+Determine the corresponding cell using the geometry of the table.
+
+For a skewed card:
+
+- Identify the boundaries of the hole columns.
+- Determine the HCP cell inside each corresponding column.
+- Follow the perspective of the table.
+- Use neighboring columns to confirm the mapping.
+
+The HCP cell should be mapped to the same logical table column as the corresponding hole.
+
+------------------------------------------------------------
+TWO NINES
+------------------------------------------------------------
+
+If holes 1–9 and 10–18 are shown in separate sections, determine the HCP mapping independently for each section.
+
+For example:
+
+Front nine:
+
+Hole:  1   2   3   4   5   6   7   8   9
+Hcp:  11  13  15   7  17   3   9   5   1
+
+Back nine:
+
+Hole: 10  11  12  13  14  15  16  17  18
+Hcp:   6   4  18  12   2   8  10  16  14
+
+The output must preserve these exact physical mappings.
+
+Do NOT combine all 18 HCP values and then reconstruct their order.
+
+------------------------------------------------------------
+VERTICAL SCORECARDS
+------------------------------------------------------------
+
+If the scorecard is vertical, apply the same principle.
+
+For example:
+
+Hole 1
+Par 4
+Hcp 11
+Marc 5
+
+Hole 2
+Par 5
+Hcp 13
+Marc 6
+
+The mapping is:
+
+Hole 1 → Hcp 11
+Hole 2 → Hcp 13
+
+The orientation of the scorecard does not change the rule.
+
+------------------------------------------------------------
+HCP CROSS-CHECK
+------------------------------------------------------------
+
+After determining the HCP mapping from physical position, perform a secondary validation.
+
+If the HCP values are the numbers 1–18 and each occurs once, this is useful as a validation signal.
+
+However:
+
+THE UNIQUE 1–18 SET MUST NEVER BE USED TO DETERMINE THE MAPPING.
+
+Use it only to detect possible OCR errors.
+
+For example, if you physically read:
+
+Hole 1 → 11
+Hole 2 → 13
+Hole 3 → 15
+...
+
+and the resulting HCP values contain every number from 1–18 exactly once, this supports the extraction.
+
+If a value is duplicated or missing, re-examine the image.
+
+But NEVER rearrange the values merely to make them become 1–18.
+
+------------------------------------------------------------
+HCP FINAL VALIDATION
+------------------------------------------------------------
+
+Before returning the JSON, independently verify each HCP position:
+
+For each output index i:
+
+1. Identify Hole[i].
+2. Find the physical hole cell for Hole[i].
+3. Follow the table geometry to the HCP row/column.
+4. Confirm that Hcp[i] is the value physically located in that corresponding cell.
+
+Do this independently for EVERY hole.
+
+Do not validate only the set of HCP numbers.
+
+The critical validation is:
+
+CORRECT HOLE ↔ CORRECT PHYSICAL HCP CELL
+
+not merely:
+
+CORRECT SET OF HCP VALUES
+
 
 ============================================================
 PLAYER DETECTION
