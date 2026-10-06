@@ -38,6 +38,8 @@ def main(image_path: str | None = None, pre_process: bool = True, model_name: st
         "Follow this example structure EXACTLY:{\"Hole\": [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18], \"Par\": [5,4,4,4,4,3,4,3,5,5,4,4,3,5,4,4,3,4],\"Hcp\": [9,5,13,11,1,17,15,3,7,6,4,18,12,2,8,10,16,14],\"Bernie\": [7,6,6,4,6,5,4,8,0,null,6,6,7,null,null,5,7,9],\"Marc\": [7,6,6,4,6,5,4,8,0,null,6,6,7,null,null,5,7,9]}"
     )
 
+    prompt = open("Scorecard_prompt.md", "r", encoding="utf-8").read()
+
     now = datetime.now()
     date_time = now.strftime("%d.%m.%Y %H:%M:%S")
     scorecard_path = f"json/golf_df/ai_result_{date_time}.json"

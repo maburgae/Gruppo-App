@@ -72,6 +72,8 @@ prompt = (
     # "The picture is either the complete scorecard with hole 1 to 18, or half, with 1 to 9 or 10 to 18. Put either 9 or 18 holes in the json."
 )
 
+prompt = open("Scorecard_prompt.md", "r", encoding="utf-8").read()
+
 now = datetime.now()
 date_time = now.strftime("%d.%m.%Y %H:%M:%S")
 scorecard_path = f"json/golf_df/golf_df_{date_time}.json"
