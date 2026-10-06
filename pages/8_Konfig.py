@@ -16,8 +16,8 @@ import os
 DEFAULT_PLAYERS_STR = '["Marc","Andy","Bernie","Jens","Heiko","Markus","Buffy"]'
 ROUND_PLAYERS = ["Marc", "Andy", "Bernie", "Jens", "Markus", "Buffy"]
 UPLOAD_MODEL_OPTIONS = [
-    "gpt-5.6-sol",
     "gpt-5-mini",
+    "gpt-5.6-sol",
     "gpt-5",
     "gpt-5.6-terra",
     "gpt-5.6-luna",
@@ -76,7 +76,7 @@ def _init_state():
     if "konf_uploaded_name" not in st.session_state:
         st.session_state.konf_uploaded_name = ""
     if "konf_preprocess" not in st.session_state:
-        st.session_state.konf_preprocess = True
+        st.session_state.konf_preprocess = False
     if "konf_upload_model" not in st.session_state:
         st.session_state.konf_upload_model = UPLOAD_MODEL_OPTIONS[0]
     if "konf_round_date" not in st.session_state:
