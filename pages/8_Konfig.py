@@ -651,7 +651,7 @@ def render(st):
             st.success("No-show Liste für die neue Runde geleert.")
 
     # Option: Preprocess vor Upload
-    st.checkbox("Bild vor Upload vorverarbeiten (empfohlen)", key="konf_preprocess", value=st.session_state.get("konf_preprocess", True))
+    st.checkbox("Bild vor Upload vorverarbeiten (empfohlen)", key="konf_preprocess", value=st.session_state.get("konf_preprocess", False))
     st.selectbox(
         "AI Modell (Scorecard Upload)",
         options=UPLOAD_MODEL_OPTIONS,
