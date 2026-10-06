@@ -6,6 +6,7 @@ Wir wollen Spaß bei der Sache haben, bringe die Ergebnisse also in fröhlichen,
 
 Beziehe in den Auswertungen ausschließlich folgenden Spieler ein:
 Marc, Bernie, Heiko, Markus, Andy, Buffy, Jens
+Erwähne nicht, dass nur diese Spieler betrachtet werden.
 
 
 # Hier die Beschreibung der Datei allrounds.json
