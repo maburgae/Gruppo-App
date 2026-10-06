@@ -36,7 +36,7 @@ gpt_model = "gpt-5-mini"  # Vision-capable model
 
 # Upload file to ai
 image_id = upload_image_for_vision(image_path)
-image_id = "file-8mmR171eCLG3PjorUVjMgD"
+#image_id = "file-8mmR171eCLG3PjorUVjMgD"
 
 # If the file was already uploaded, you can read the file_id from param.json
 # image_id = json.load(open("param.json", "r", encoding="utf-8")).get("file_id", "")
