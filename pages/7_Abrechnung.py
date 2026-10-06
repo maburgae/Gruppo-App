@@ -1,5 +1,7 @@
 import json
 import os
+import base64
+import requests
 from datetime import datetime
 import pandas as pd
 import uuid  # hinzugefügt für eindeutige IDs
@@ -68,6 +70,45 @@ def _save_expenses(expenses: list):
     os.makedirs(os.path.dirname(EXPENSE_FILE), exist_ok=True)
     with open(EXPENSE_FILE, "w", encoding="utf-8") as f:
         json.dump(expenses, f, ensure_ascii=False, indent=2)
+
+
+def _push_expense_file_to_github(st):
+    token = getattr(st, "secrets", {}).get("GITHUB_TOKEN") if hasattr(st, "secrets") else None
+    repo = (getattr(st, "secrets", {}).get("REPO") if hasattr(st, "secrets") else None) or "USER/REPO"
+    branch = (getattr(st, "secrets", {}).get("BRANCH") if hasattr(st, "secrets") else None) or "main"
+
+    if not token or repo == "USER/REPO":
+        return False, "GitHub Push uebersprungen (GITHUB_TOKEN/REPO fehlen)."
+
+    if not os.path.exists(EXPENSE_FILE):
+        return False, f"GitHub Push fehlgeschlagen: Datei fehlt ({EXPENSE_FILE})."
+
+    try:
+        with open(EXPENSE_FILE, "rb") as f:
+            local_bytes = f.read()
+        local_b64 = base64.b64encode(local_bytes).decode()
+
+        headers = {"Authorization": f"token {token}", "Accept": "application/vnd.github+json"}
+        api_url = f"https://api.github.com/repos/{repo}/contents/{EXPENSE_FILE}"
+
+        sha = None
+        r_get = requests.get(api_url, params={"ref": branch}, headers=headers)
+        if r_get.status_code == 200:
+            sha = r_get.json().get("sha")
+        elif r_get.status_code != 404:
+            return False, f"GitHub GET Fehler {r_get.status_code}: {r_get.text[:140]}"
+
+        commit_msg = f"Update abrechnung.json {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}"
+        payload = {"message": commit_msg, "content": local_b64, "branch": branch}
+        if sha:
+            payload["sha"] = sha
+
+        r_put = requests.put(api_url, headers=headers, json=payload)
+        if r_put.status_code in (200, 201):
+            return True, "GitHub Push fuer abrechnung.json erfolgreich."
+        return False, f"GitHub PUT Fehler {r_put.status_code}: {r_put.text[:180]}"
+    except Exception as e:
+        return False, f"GitHub Push Ausnahme: {e}"
 
 
 def render(st):
@@ -224,6 +265,11 @@ def render(st):
         expenses.append(entry)
         _save_expenses(expenses)
         st.success("Ausgabe gespeichert.")
+        ok_push, msg_push = _push_expense_file_to_github(st)
+        if ok_push:
+            st.success(msg_push)
+        else:
+            st.warning(msg_push)
         try:
             st.rerun()
         except Exception:
@@ -246,6 +292,11 @@ def render(st):
                 new_list = [x for x in expenses if x["id"] != e["id"]]
                 _save_expenses(new_list)
                 st.success("Eintrag gelöscht.")
+                ok_push, msg_push = _push_expense_file_to_github(st)
+                if ok_push:
+                    st.success(msg_push)
+                else:
+                    st.warning(msg_push)
                 try:
                     st.rerun()
                 except Exception:
@@ -288,6 +339,11 @@ def render(st):
                                     break
                             _save_expenses(expenses)
                             st.success("Eintrag aktualisiert.")
+                            ok_push, msg_push = _push_expense_file_to_github(st)
+                            if ok_push:
+                                st.success(msg_push)
+                            else:
+                                st.warning(msg_push)
                             st.session_state.ab_edit_id = None
                             try:
                                 st.rerun()

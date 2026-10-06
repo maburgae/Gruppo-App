@@ -72,6 +72,10 @@ def _init_state():
         st.session_state.konf_file_id = ""
     if "konf_output" not in st.session_state:
         st.session_state.konf_output = ""
+    if "konf_github_api_log" not in st.session_state:
+        st.session_state.konf_github_api_log = ""
+    if "konf_bulk_git_log" not in st.session_state:
+        st.session_state.konf_bulk_git_log = ""
     # Track uploads to avoid re-processing on every rerun
     if "konf_uploaded_name" not in st.session_state:
         st.session_state.konf_uploaded_name = ""
@@ -90,6 +94,89 @@ def _init_state():
             st.session_state[flight_key] = "1"
         elif st.session_state[flight_key] not in ("1", "2"):
             st.session_state[flight_key] = "1"
+
+
+def _push_files_to_github_api(st, files: list[str], commit_prefix: str = "Update"):
+    """
+    Pushes the given local files to GitHub using the contents API.
+    Returns (ok: bool, log_lines: list[str]).
+    """
+    log = []
+    token = getattr(st, "secrets", {}).get("GITHUB_TOKEN") if hasattr(st, "secrets") else None
+    repo = (getattr(st, "secrets", {}).get("REPO") if hasattr(st, "secrets") else None) or "USER/REPO"
+    branch = (getattr(st, "secrets", {}).get("BRANCH") if hasattr(st, "secrets") else None) or "main"
+
+    if not token or repo == "USER/REPO":
+        return False, ["GitHub Secrets fehlen (GITHUB_TOKEN / REPO)."]
+
+    headers = {"Authorization": f"token {token}", "Accept": "application/vnd.github+json"}
+    from hashlib import md5 as _md5
+    from datetime import datetime as _dt
+
+    updated = 0
+    skipped = 0
+    failed = 0
+
+    for path in files:
+        log.append(f"--- {path} ---")
+        if not os.path.exists(path):
+            log.append("Datei fehlt lokal – uebersprungen.")
+            failed += 1
+            continue
+        try:
+            with open(path, "rb") as f:
+                local_bytes = f.read()
+            local_md5 = _md5(local_bytes).hexdigest()
+            local_b64 = base64.b64encode(local_bytes).decode()
+            log.append(f"Local MD5={local_md5} Bytes={len(local_bytes)}")
+        except Exception as ex:
+            log.append(f"Lesefehler: {ex}")
+            failed += 1
+            continue
+
+        api_url = f"https://api.github.com/repos/{repo}/contents/{path}"
+        sha = None
+        remote_same = False
+        r_get = requests.get(api_url, params={"ref": branch}, headers=headers)
+        log.append(f"GET {r_get.status_code}")
+        if r_get.status_code == 200:
+            try:
+                data_json = r_get.json()
+                sha = data_json.get("sha")
+                remote_content = data_json.get("content", "").strip()
+                remote_raw = "".join(remote_content.splitlines())
+                remote_bytes = base64.b64decode(remote_raw)
+                remote_md5 = _md5(remote_bytes).hexdigest()
+                log.append(f"Remote MD5={remote_md5} Bytes={len(remote_bytes)}")
+                if remote_md5 == local_md5:
+                    remote_same = True
+            except Exception as ex_par:
+                log.append(f"Remote Parse Fehler: {ex_par}")
+        elif r_get.status_code == 404:
+            log.append("Datei existiert remote noch nicht – wird angelegt.")
+        else:
+            log.append(f"GET Fehler {r_get.status_code}: {r_get.text[:180]}")
+
+        if remote_same:
+            log.append("Unveraendert – uebersprungen.")
+            skipped += 1
+            continue
+
+        commit_msg = f"{commit_prefix} {os.path.basename(path)} {_dt.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}"
+        payload = {"message": commit_msg, "content": local_b64, "branch": branch}
+        if sha:
+            payload["sha"] = sha
+
+        r_put = requests.put(api_url, headers=headers, json=payload)
+        log.append(f"PUT {r_put.status_code}")
+        if r_put.status_code in (200, 201):
+            updated += 1
+        else:
+            log.append(f"Fehler Antwort: {r_put.text[:220]}")
+            failed += 1
+
+    log.append(f"Ergebnis: updated={updated} skipped={skipped} failed={failed}")
+    return failed == 0, log
 
 
 def render(st):
@@ -1119,6 +1206,17 @@ def render(st):
             with open(allrounds_path, "w", encoding="utf-8") as f:
                 json.dump(allrounds, f, ensure_ascii=False, indent=2)
             st.success(f"Datum {date_key} in allrounds.json eingefügt/aktualisiert.")
+
+            push_ok, push_log = _push_files_to_github_api(
+                st,
+                ["json/allrounds.json", "json/golf_df/golf_df.json"],
+                commit_prefix="Key-aus-Tag Sync",
+            )
+            if push_ok:
+                st.success("GitHub Push fuer allrounds.json und golf_df.json erfolgreich.")
+            else:
+                st.warning("GitHub Push teilweise/komplett fehlgeschlagen. Siehe Log.")
+            st.text_area("Key-aus-Tag GitHub Log", value="\n".join(push_log), height=260, key="key_to_allrounds_push_log")
         except Exception as e:
             st.error(f"Fehler: {e}")
 
@@ -1228,7 +1326,9 @@ def render(st):
                     log.append(f"Fehler Antwort: {r_put.text[:220]}")
                     failed += 1
             log.append(f"Ergebnis: updated={updated} skipped={skipped} failed={failed}")
-        st.text_area("GitHub API Log", value="\n".join(log), height=420)
+        st.session_state.konf_github_api_log = "\n".join(log)
+
+    st.text_area("GitHub API Log", value=st.session_state.get("konf_github_api_log", ""), height=420, key="konf_github_api_log_area")
 
     # --- Bulk Git Commit aller Änderungen (nutzt lokales Git) ---
     st.markdown("---")
@@ -1289,7 +1389,9 @@ def render(st):
                         st.success("Bulk Push erfolgreich.")
                     else:
                         st.error("Bulk Push fehlgeschlagen.")
-        st.text_area("Bulk Git Log", value="\n".join(log), height=320)
+        st.session_state.konf_bulk_git_log = "\n".join(log)
+
+    st.text_area("Bulk Git Log", value=st.session_state.get("konf_bulk_git_log", ""), height=320, key="konf_bulk_git_log_area")
 
     # Ausgabefeld "Output"
     text15("Output")

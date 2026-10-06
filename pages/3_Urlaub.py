@@ -206,9 +206,13 @@ def render(st):
         if not isinstance(pdata, dict):
             return False
         score = pdata.get("Score")
-        if not isinstance(score, list):
-            return False
-        return any(isinstance(v, (int, float)) for v in score)
+        if isinstance(score, list) and any(isinstance(v, (int, float)) for v in score):
+            return True
+
+        # Legacy rounds (e.g. early years) can miss hole-by-hole scores but still
+        # contain valid participation metrics.
+        legacy_play_fields = ("Platz", "Netto", "Gesp.Hcp", "Birdies", "Pars", "Bogies", "Strich")
+        return any(pdata.get(k) is not None for k in legacy_play_fields)
 
     def _render_scorecard_html(round_data):
         holes = list(range(1, 19))
@@ -352,13 +356,17 @@ def render(st):
         html.append("</tbody></table>")
         return "".join(html)
 
-    def years_with_par(data: dict) -> list[int]:
+    def _has_player_entries(obj: dict) -> bool:
+        players = obj.get("Spieler") if isinstance(obj, dict) else None
+        return isinstance(players, dict) and len(players) > 0
+
+    def years_with_players(data: dict) -> list[int]:
         years = set()
         for d, obj in data.items():
             y = get_year(d)
             if y is None:
                 continue
-            if obj.get("Par") is not None:
+            if _has_player_entries(obj):
                 years.add(y)
         return sorted(years)
 
@@ -393,9 +401,9 @@ def render(st):
     except Exception:
         destinations = {}
 
-    years = years_with_par(data)
+    years = years_with_players(data)
     if not years:
-        st.info("Keine Jahre mit Par-Daten gefunden.")
+        st.info("Keine Jahre mit Spieler-Eintraegen gefunden.")
         return
 
     year_options = sorted(years, reverse=True)
@@ -406,11 +414,11 @@ def render(st):
 
     year = st.selectbox("Jahr wählen", year_options, index=0, format_func=fmt_year)
 
-    # Filter rounds of selected year (and with Par not None)
+    # Filter rounds of selected year that contain player entries
     rounds_for_year = []  # list of (date_str, obj)
     for d, obj in data.items():
         y = get_year(d)
-        if y == year and obj.get("Par") is not None:
+        if y == year and _has_player_entries(obj):
             rounds_for_year.append((d, obj))
     rounds_for_year.sort(key=lambda kv: datetime.strptime(kv[0], "%d.%m.%Y"))
 
