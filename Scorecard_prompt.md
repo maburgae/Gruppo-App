@@ -650,23 +650,17 @@ If two numeric interpretations remain genuinely ambiguous, return:
 
 null
 
-Do NOT guess merely to fill the array.
-
-A correct null is preferable to an incorrect score.
-
-============================================================
-ZERO
-============================================================
-
 If the scorecard clearly contains the numeric digit:
 
 0
 
 return:
 
-0
+null
 
-Do not convert a clearly visible zero into null.
+Do NOT guess merely to fill the array.
+
+A correct null is preferable to an incorrect score.
 
 ============================================================
 SPECIAL MARKS
