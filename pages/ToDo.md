@@ -22,7 +22,8 @@ Hcp	    6	4	10	12	8	16	2	14	18
 
 D'Este see json
 
-Lindau make assumptions.
+Lindau make assumptions
+Verona make assumptions
 
 Varese see json
 
