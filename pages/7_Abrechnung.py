@@ -2,6 +2,7 @@ import json
 import os
 import base64
 import requests
+import subprocess
 from datetime import datetime
 import pandas as pd
 import uuid  # hinzugefügt für eindeutige IDs
@@ -72,13 +73,75 @@ def _save_expenses(expenses: list):
         json.dump(expenses, f, ensure_ascii=False, indent=2)
 
 
+def _git_commit_and_push_expense_file():
+    """Commit + push der Abrechnungsdatei direkt vom Streamlit-Server."""
+    if not os.path.exists(EXPENSE_FILE):
+        return False, f"Git Push fehlgeschlagen: Datei fehlt ({EXPENSE_FILE})."
+
+    try:
+        # Nur die Abrechnungsdatei stage'n
+        add_res = subprocess.run(
+            ["git", "add", EXPENSE_FILE],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if add_res.returncode != 0:
+            err = (add_res.stderr or add_res.stdout or "").strip()
+            return False, f"Git add fehlgeschlagen: {err[:180]}"
+
+        # Commit erstellen; falls keine Änderungen vorhanden sind, sauber zurückmelden
+        commit_msg = f"Update abrechnung.json {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}"
+        commit_res = subprocess.run(
+            ["git", "commit", "-m", commit_msg],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if commit_res.returncode != 0:
+            out = f"{commit_res.stdout}\n{commit_res.stderr}".lower()
+            if "nothing to commit" in out or "keine änderungen" in out:
+                return True, "Keine neuen Änderungen in abrechnung.json zum Committen."
+            err = (commit_res.stderr or commit_res.stdout or "").strip()
+            return False, f"Git commit fehlgeschlagen: {err[:180]}"
+
+        # Branch ermitteln und pushen
+        branch_res = subprocess.run(
+            ["git", "branch", "--show-current"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        branch = (branch_res.stdout or "").strip() or "main"
+
+        push_res = subprocess.run(
+            ["git", "push", "origin", branch],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if push_res.returncode != 0:
+            err = (push_res.stderr or push_res.stdout or "").strip()
+            return False, f"Git push fehlgeschlagen: {err[:220]}"
+
+        return True, f"Git Commit + Push erfolgreich auf origin/{branch}."
+    except Exception as e:
+        return False, f"Git Commit/Push Ausnahme: {e}"
+
+
 def _push_expense_file_to_github(st):
+    # Primär: echter git commit+push auf dem Streamlit-Server.
+    ok_git, msg_git = _git_commit_and_push_expense_file()
+    if ok_git:
+        return True, msg_git
+
+    # Fallback auf GitHub-Contents-API (alt), falls Server-Git nicht klappt.
     token = getattr(st, "secrets", {}).get("GITHUB_TOKEN") if hasattr(st, "secrets") else None
     repo = (getattr(st, "secrets", {}).get("REPO") if hasattr(st, "secrets") else None) or "USER/REPO"
     branch = (getattr(st, "secrets", {}).get("BRANCH") if hasattr(st, "secrets") else None) or "main"
 
     if not token or repo == "USER/REPO":
-        return False, "GitHub Push uebersprungen (GITHUB_TOKEN/REPO fehlen)."
+        return False, f"{msg_git} | GitHub API Push uebersprungen (GITHUB_TOKEN/REPO fehlen)."
 
     if not os.path.exists(EXPENSE_FILE):
         return False, f"GitHub Push fehlgeschlagen: Datei fehlt ({EXPENSE_FILE})."
