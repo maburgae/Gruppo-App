@@ -42,5 +42,20 @@
     ],
     "amount": 1155.0,
     "description": "Santa Clara GF"
+  },
+  {
+    "id": "6b3f4aaf-5b29-4889-ab18-538dfdb69a04",
+    "timestamp": "2026-10-07 16:01:09",
+    "payer": "Andy",
+    "beneficiaries": [
+      "Andy",
+      "Bernie",
+      "Buffy",
+      "Jens",
+      "Marc",
+      "Markus"
+    ],
+    "amount": 10.0,
+    "description": "Test"
   }
 ]
