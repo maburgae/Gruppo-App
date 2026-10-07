@@ -73,39 +73,60 @@ def _save_expenses(expenses: list):
         json.dump(expenses, f, ensure_ascii=False, indent=2)
 
 
+def _fmt_cmd_output(out: str, err: str, limit: int = 500) -> str:
+    txt = (out or "").strip()
+    etxt = (err or "").strip()
+    merged = txt if not etxt else (txt + "\n" + etxt if txt else etxt)
+    if len(merged) > limit:
+        return merged[:limit] + "..."
+    return merged
+
+
 def _git_commit_and_push_expense_file():
     """Commit + push der Abrechnungsdatei direkt vom Streamlit-Server."""
+    debug_lines = []
+
+    def dbg(msg: str):
+        debug_lines.append(f"[{datetime.now().strftime('%H:%M:%S')}] {msg}")
+
     if not os.path.exists(EXPENSE_FILE):
-        return False, f"Git Push fehlgeschlagen: Datei fehlt ({EXPENSE_FILE})."
+        msg = f"Git Push fehlgeschlagen: Datei fehlt ({EXPENSE_FILE})."
+        dbg(msg)
+        return False, msg, debug_lines
 
     try:
         # Nur die Abrechnungsdatei stage'n
+        dbg(f"RUN: git add {EXPENSE_FILE}")
         add_res = subprocess.run(
             ["git", "add", EXPENSE_FILE],
             capture_output=True,
             text=True,
             check=False,
         )
+        dbg(f"RET: {add_res.returncode} | OUT: {_fmt_cmd_output(add_res.stdout, add_res.stderr)}")
         if add_res.returncode != 0:
             err = (add_res.stderr or add_res.stdout or "").strip()
-            return False, f"Git add fehlgeschlagen: {err[:180]}"
+            return False, f"Git add fehlgeschlagen: {err[:180]}", debug_lines
 
         # Commit erstellen; falls keine Änderungen vorhanden sind, sauber zurückmelden
         commit_msg = f"Update abrechnung.json {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}"
+        dbg(f"RUN: git commit -m '{commit_msg}'")
         commit_res = subprocess.run(
             ["git", "commit", "-m", commit_msg],
             capture_output=True,
             text=True,
             check=False,
         )
+        dbg(f"RET: {commit_res.returncode} | OUT: {_fmt_cmd_output(commit_res.stdout, commit_res.stderr)}")
         if commit_res.returncode != 0:
             out = f"{commit_res.stdout}\n{commit_res.stderr}".lower()
             if "nothing to commit" in out or "keine änderungen" in out:
-                return True, "Keine neuen Änderungen in abrechnung.json zum Committen."
+                return True, "Keine neuen Änderungen in abrechnung.json zum Committen.", debug_lines
             err = (commit_res.stderr or commit_res.stdout or "").strip()
-            return False, f"Git commit fehlgeschlagen: {err[:180]}"
+            return False, f"Git commit fehlgeschlagen: {err[:180]}", debug_lines
 
         # Branch ermitteln und pushen
+        dbg("RUN: git branch --show-current")
         branch_res = subprocess.run(
             ["git", "branch", "--show-current"],
             capture_output=True,
@@ -113,38 +134,50 @@ def _git_commit_and_push_expense_file():
             check=False,
         )
         branch = (branch_res.stdout or "").strip() or "main"
+        dbg(f"RET: {branch_res.returncode} | branch={branch}")
 
+        dbg(f"RUN: git push origin {branch}")
         push_res = subprocess.run(
             ["git", "push", "origin", branch],
             capture_output=True,
             text=True,
             check=False,
         )
+        dbg(f"RET: {push_res.returncode} | OUT: {_fmt_cmd_output(push_res.stdout, push_res.stderr)}")
         if push_res.returncode != 0:
             err = (push_res.stderr or push_res.stdout or "").strip()
-            return False, f"Git push fehlgeschlagen: {err[:220]}"
+            return False, f"Git push fehlgeschlagen: {err[:220]}", debug_lines
 
-        return True, f"Git Commit + Push erfolgreich auf origin/{branch}."
+        return True, f"Git Commit + Push erfolgreich auf origin/{branch}.", debug_lines
     except Exception as e:
-        return False, f"Git Commit/Push Ausnahme: {e}"
+        dbg(f"EXCEPTION: {e}")
+        return False, f"Git Commit/Push Ausnahme: {e}", debug_lines
 
 
 def _push_expense_file_to_github(st):
     # Primär: echter git commit+push auf dem Streamlit-Server.
-    ok_git, msg_git = _git_commit_and_push_expense_file()
+    ok_git, msg_git, dbg_git = _git_commit_and_push_expense_file()
     if ok_git:
-        return True, msg_git
+        return True, msg_git, dbg_git
 
     # Fallback auf GitHub-Contents-API (alt), falls Server-Git nicht klappt.
+    dbg_api = list(dbg_git)
+
+    def api_dbg(msg: str):
+        dbg_api.append(f"[{datetime.now().strftime('%H:%M:%S')}] {msg}")
+
     token = getattr(st, "secrets", {}).get("GITHUB_TOKEN") if hasattr(st, "secrets") else None
     repo = (getattr(st, "secrets", {}).get("REPO") if hasattr(st, "secrets") else None) or "USER/REPO"
     branch = (getattr(st, "secrets", {}).get("BRANCH") if hasattr(st, "secrets") else None) or "main"
+    api_dbg("Fallback: GitHub Contents API aktiviert")
 
     if not token or repo == "USER/REPO":
-        return False, f"{msg_git} | GitHub API Push uebersprungen (GITHUB_TOKEN/REPO fehlen)."
+        api_dbg("GITHUB_TOKEN/REPO fehlen")
+        return False, f"{msg_git} | GitHub API Push uebersprungen (GITHUB_TOKEN/REPO fehlen).", dbg_api
 
     if not os.path.exists(EXPENSE_FILE):
-        return False, f"GitHub Push fehlgeschlagen: Datei fehlt ({EXPENSE_FILE})."
+        api_dbg(f"Datei fehlt: {EXPENSE_FILE}")
+        return False, f"GitHub Push fehlgeschlagen: Datei fehlt ({EXPENSE_FILE}).", dbg_api
 
     try:
         with open(EXPENSE_FILE, "rb") as f:
@@ -155,28 +188,42 @@ def _push_expense_file_to_github(st):
         api_url = f"https://api.github.com/repos/{repo}/contents/{EXPENSE_FILE}"
 
         sha = None
+        api_dbg(f"RUN: GET {api_url}?ref={branch}")
         r_get = requests.get(api_url, params={"ref": branch}, headers=headers)
+        api_dbg(f"RET: {r_get.status_code}")
         if r_get.status_code == 200:
             sha = r_get.json().get("sha")
         elif r_get.status_code != 404:
-            return False, f"GitHub GET Fehler {r_get.status_code}: {r_get.text[:140]}"
+            return False, f"GitHub GET Fehler {r_get.status_code}: {r_get.text[:140]}", dbg_api
 
         commit_msg = f"Update abrechnung.json {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}"
         payload = {"message": commit_msg, "content": local_b64, "branch": branch}
         if sha:
             payload["sha"] = sha
 
+        api_dbg("RUN: PUT contents update")
         r_put = requests.put(api_url, headers=headers, json=payload)
+        api_dbg(f"RET: {r_put.status_code}")
         if r_put.status_code in (200, 201):
-            return True, "GitHub Push fuer abrechnung.json erfolgreich."
-        return False, f"GitHub PUT Fehler {r_put.status_code}: {r_put.text[:180]}"
+            return True, "GitHub Push fuer abrechnung.json erfolgreich.", dbg_api
+        return False, f"GitHub PUT Fehler {r_put.status_code}: {r_put.text[:180]}", dbg_api
     except Exception as e:
-        return False, f"GitHub Push Ausnahme: {e}"
+        api_dbg(f"EXCEPTION: {e}")
+        return False, f"GitHub Push Ausnahme: {e}", dbg_api
 
 
 def render(st):
     st.markdown(STYLE_CSS, unsafe_allow_html=True)
     st.markdown("### Abrechnung")
+
+    if "ab_last_git_debug" not in st.session_state:
+        st.session_state.ab_last_git_debug = []
+
+    with st.expander("Debug: letzter Git/Push Ablauf", expanded=False):
+        if st.session_state.ab_last_git_debug:
+            st.code("\n".join(st.session_state.ab_last_git_debug), language="text")
+        else:
+            st.caption("Noch kein Speichern/Löschen ausgeführt.")
 
     players = _load_players()
     expenses = _load_expenses()
@@ -328,7 +375,8 @@ def render(st):
         expenses.append(entry)
         _save_expenses(expenses)
         st.success("Ausgabe gespeichert.")
-        ok_push, msg_push = _push_expense_file_to_github(st)
+        ok_push, msg_push, dbg_push = _push_expense_file_to_github(st)
+        st.session_state.ab_last_git_debug = dbg_push
         if ok_push:
             st.success(msg_push)
         else:
@@ -355,7 +403,8 @@ def render(st):
                 new_list = [x for x in expenses if x["id"] != e["id"]]
                 _save_expenses(new_list)
                 st.success("Eintrag gelöscht.")
-                ok_push, msg_push = _push_expense_file_to_github(st)
+                ok_push, msg_push, dbg_push = _push_expense_file_to_github(st)
+                st.session_state.ab_last_git_debug = dbg_push
                 if ok_push:
                     st.success(msg_push)
                 else:
@@ -402,7 +451,8 @@ def render(st):
                                     break
                             _save_expenses(expenses)
                             st.success("Eintrag aktualisiert.")
-                            ok_push, msg_push = _push_expense_file_to_github(st)
+                            ok_push, msg_push, dbg_push = _push_expense_file_to_github(st)
+                            st.session_state.ab_last_git_debug = dbg_push
                             if ok_push:
                                 st.success(msg_push)
                             else:
