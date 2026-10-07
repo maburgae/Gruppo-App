@@ -50,6 +50,8 @@ Hinweise:
 - Wenn man von Schlägen pro Runde spricht, oder (Gesamt score) dann ist das nicht die Anzahl der Schläge addiert, sondern Par Summe des Platzes plus gespielters Hcp. Wenn man die Schläge addieren würde ginge das nicht bei Löchern, ohne Score/Strich
 - wenn man von Scramble spricht, dann ist damit gemeint, dass an einem Loch der beste Score gezählt wird von allen Spielern, die der Runde mitgespielt haben
 - Wenn man innerhalb einer Runde von allen Spielern spricht, dann meint er mit einem Spieler, die eine Detail genommen haben, nicht alle Spieler, die ausgewertet werden kann
+- Ein Strich bedeutet 0 Nettopunkte an einem Loch, nicht unbedingt nur x. Wenn jemand mit DayHcp 18 eine 7 spielt an Par 3, dann ist da auch ein Strich.
+- x oder - ist ohne Wertung. Nicht ohne Wertung mit Strich verwechseln.
 
 
 # Beschreibung der Datei Destinations.json
