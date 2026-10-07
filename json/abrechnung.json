@@ -57,20 +57,5 @@
     ],
     "amount": 10.0,
     "description": "Test"
-  },
-  {
-    "id": "da871c2e-3af1-404c-a680-25fbd9caf8ae",
-    "timestamp": "2026-10-07 16:06:08",
-    "payer": "Marc",
-    "beneficiaries": [
-      "Andy",
-      "Bernie",
-      "Buffy",
-      "Jens",
-      "Marc",
-      "Markus"
-    ],
-    "amount": 100.0,
-    "description": "TEst2"
   }
 ]
