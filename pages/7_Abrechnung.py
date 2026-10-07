@@ -1,7 +1,5 @@
 import json
 import os
-import base64
-import requests
 from datetime import datetime
 import pandas as pd
 import uuid  # hinzugefügt für eindeutige IDs
@@ -72,71 +70,9 @@ def _save_expenses(expenses: list):
         json.dump(expenses, f, ensure_ascii=False, indent=2)
 
 
-def _push_expense_file_to_github(st):
-    # API-only: keine lokalen git-Kommandos auf dem Streamlit-Server.
-    dbg_api = []
-
-    def api_dbg(msg: str):
-        dbg_api.append(f"[{datetime.now().strftime('%H:%M:%S')}] {msg}")
-
-    token = getattr(st, "secrets", {}).get("GITHUB_TOKEN") if hasattr(st, "secrets") else None
-    repo = (getattr(st, "secrets", {}).get("REPO") if hasattr(st, "secrets") else None) or "USER/REPO"
-    branch = (getattr(st, "secrets", {}).get("BRANCH") if hasattr(st, "secrets") else None) or "main"
-    api_dbg("Mode: API-only (GitHub Contents API)")
-
-    if not token or repo == "USER/REPO":
-        api_dbg("GITHUB_TOKEN/REPO fehlen")
-        return False, "GitHub API Push uebersprungen (GITHUB_TOKEN/REPO fehlen).", dbg_api
-
-    if not os.path.exists(EXPENSE_FILE):
-        api_dbg(f"Datei fehlt: {EXPENSE_FILE}")
-        return False, f"GitHub Push fehlgeschlagen: Datei fehlt ({EXPENSE_FILE}).", dbg_api
-
-    try:
-        with open(EXPENSE_FILE, "rb") as f:
-            local_bytes = f.read()
-        local_b64 = base64.b64encode(local_bytes).decode()
-
-        headers = {"Authorization": f"token {token}", "Accept": "application/vnd.github+json"}
-        api_url = f"https://api.github.com/repos/{repo}/contents/{EXPENSE_FILE}"
-
-        sha = None
-        api_dbg(f"RUN: GET {api_url}?ref={branch}")
-        r_get = requests.get(api_url, params={"ref": branch}, headers=headers)
-        api_dbg(f"RET: {r_get.status_code}")
-        if r_get.status_code == 200:
-            sha = r_get.json().get("sha")
-        elif r_get.status_code != 404:
-            return False, f"GitHub GET Fehler {r_get.status_code}: {r_get.text[:140]}", dbg_api
-
-        commit_msg = f"Update abrechnung.json {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}"
-        payload = {"message": commit_msg, "content": local_b64, "branch": branch}
-        if sha:
-            payload["sha"] = sha
-
-        api_dbg("RUN: PUT contents update")
-        r_put = requests.put(api_url, headers=headers, json=payload)
-        api_dbg(f"RET: {r_put.status_code}")
-        if r_put.status_code in (200, 201):
-            return True, "GitHub Push fuer abrechnung.json erfolgreich.", dbg_api
-        return False, f"GitHub PUT Fehler {r_put.status_code}: {r_put.text[:180]}", dbg_api
-    except Exception as e:
-        api_dbg(f"EXCEPTION: {e}")
-        return False, f"GitHub Push Ausnahme: {e}", dbg_api
-
-
 def render(st):
     st.markdown(STYLE_CSS, unsafe_allow_html=True)
     st.markdown("### Abrechnung")
-
-    if "ab_last_git_debug" not in st.session_state:
-        st.session_state.ab_last_git_debug = []
-
-    with st.expander("Debug: letzter API Push Ablauf", expanded=False):
-        if st.session_state.ab_last_git_debug:
-            st.code("\n".join(st.session_state.ab_last_git_debug), language="text")
-        else:
-            st.caption("Noch kein Speichern/Löschen ausgeführt.")
 
     players = _load_players()
     expenses = _load_expenses()
@@ -288,12 +224,6 @@ def render(st):
         expenses.append(entry)
         _save_expenses(expenses)
         st.success("Ausgabe gespeichert.")
-        ok_push, msg_push, dbg_push = _push_expense_file_to_github(st)
-        st.session_state.ab_last_git_debug = dbg_push
-        if ok_push:
-            st.success(msg_push)
-        else:
-            st.warning(msg_push)
         try:
             st.rerun()
         except Exception:
@@ -316,12 +246,6 @@ def render(st):
                 new_list = [x for x in expenses if x["id"] != e["id"]]
                 _save_expenses(new_list)
                 st.success("Eintrag gelöscht.")
-                ok_push, msg_push, dbg_push = _push_expense_file_to_github(st)
-                st.session_state.ab_last_git_debug = dbg_push
-                if ok_push:
-                    st.success(msg_push)
-                else:
-                    st.warning(msg_push)
                 try:
                     st.rerun()
                 except Exception:
@@ -364,12 +288,6 @@ def render(st):
                                     break
                             _save_expenses(expenses)
                             st.success("Eintrag aktualisiert.")
-                            ok_push, msg_push, dbg_push = _push_expense_file_to_github(st)
-                            st.session_state.ab_last_git_debug = dbg_push
-                            if ok_push:
-                                st.success(msg_push)
-                            else:
-                                st.warning(msg_push)
                             st.session_state.ab_edit_id = None
                             try:
                                 st.rerun()

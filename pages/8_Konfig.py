@@ -62,72 +62,16 @@ def _save_no_show_players(players: list[str]) -> None:
 def _clear_no_show_players() -> None:
     _save_no_show_players([])
 
-
-def _safe_secrets(st):
-    """Liefert secrets dict-artig zurück; bei fehlender secrets.toml ein leeres Dict."""
-    try:
-        return st.secrets
-    except Exception:
-        return {}
-
-
-def _secret_get(st, key: str, default=None):
-    try:
-        return _safe_secrets(st).get(key, default)
-    except Exception:
-        return default
-
-
-def _secret_keys(st) -> list[str]:
-    try:
-        return list(_safe_secrets(st).keys())
-    except Exception:
-        return []
-
-
-def _as_bool(value) -> bool:
-    if isinstance(value, bool):
-        return value
-    if isinstance(value, (int, float)):
-        return value != 0
-    if isinstance(value, str):
-        return value.strip().lower() in ("1", "true", "yes", "on", "y")
-    return False
-
-
-def _is_remote_push_enabled(st) -> bool:
-    """
-    Push nur bei expliziter Server-Freigabe.
-    Lokal (ohne Secret) bleibt Push standardmäßig AUS.
-    """
-    return _as_bool(_secret_get(st, "ENABLE_REMOTE_PUSH", False))
-
 def _init_state():
     import streamlit as st
     if "konf_platzname" not in st.session_state:
         st.session_state.konf_platzname = ""
-    # Platzname beim ersten Laden aus golf_df vorbelegen, falls vorhanden.
-    if not st.session_state.konf_platzname:
-        try:
-            with open("json/golf_df/golf_df.json", "r", encoding="utf-8") as f:
-                _gdf = json.load(f)
-            if isinstance(_gdf, dict) and _gdf:
-                _k = next(iter(_gdf.keys()))
-                _ort = (_gdf.get(_k, {}) or {}).get("Ort")
-                if isinstance(_ort, str) and _ort.strip():
-                    st.session_state.konf_platzname = _ort.strip()
-        except Exception:
-            pass
     if "konf_players" not in st.session_state:
         st.session_state.konf_players = json.dumps(ROUND_PLAYERS, ensure_ascii=False)
     if "konf_file_id" not in st.session_state:
         st.session_state.konf_file_id = ""
     if "konf_output" not in st.session_state:
         st.session_state.konf_output = ""
-    if "konf_github_api_log" not in st.session_state:
-        st.session_state.konf_github_api_log = ""
-    if "konf_bulk_git_log" not in st.session_state:
-        st.session_state.konf_bulk_git_log = ""
     # Track uploads to avoid re-processing on every rerun
     if "konf_uploaded_name" not in st.session_state:
         st.session_state.konf_uploaded_name = ""
@@ -146,95 +90,6 @@ def _init_state():
             st.session_state[flight_key] = "1"
         elif st.session_state[flight_key] not in ("1", "2"):
             st.session_state[flight_key] = "1"
-
-
-def _push_files_to_github_api(st, files: list[str], commit_prefix: str = "Update"):
-    """
-    Pushes the given local files to GitHub using the contents API.
-    Returns (ok: bool, log_lines: list[str]).
-    """
-    log = []
-    if not _is_remote_push_enabled(st):
-        return False, [
-            "Remote Push ist deaktiviert (ENABLE_REMOTE_PUSH=false/fehlt).",
-            "Lokaler Betrieb: kein Push ausgeführt.",
-        ]
-
-    token = _secret_get(st, "GITHUB_TOKEN")
-    repo = _secret_get(st, "REPO") or "USER/REPO"
-    branch = _secret_get(st, "BRANCH") or "main"
-
-    if not token or repo == "USER/REPO":
-        return False, ["GitHub Secrets fehlen (GITHUB_TOKEN / REPO)."]
-
-    headers = {"Authorization": f"token {token}", "Accept": "application/vnd.github+json"}
-    from hashlib import md5 as _md5
-    from datetime import datetime as _dt
-
-    updated = 0
-    skipped = 0
-    failed = 0
-
-    for path in files:
-        log.append(f"--- {path} ---")
-        if not os.path.exists(path):
-            log.append("Datei fehlt lokal – uebersprungen.")
-            failed += 1
-            continue
-        try:
-            with open(path, "rb") as f:
-                local_bytes = f.read()
-            local_md5 = _md5(local_bytes).hexdigest()
-            local_b64 = base64.b64encode(local_bytes).decode()
-            log.append(f"Local MD5={local_md5} Bytes={len(local_bytes)}")
-        except Exception as ex:
-            log.append(f"Lesefehler: {ex}")
-            failed += 1
-            continue
-
-        api_url = f"https://api.github.com/repos/{repo}/contents/{path}"
-        sha = None
-        remote_same = False
-        r_get = requests.get(api_url, params={"ref": branch}, headers=headers)
-        log.append(f"GET {r_get.status_code}")
-        if r_get.status_code == 200:
-            try:
-                data_json = r_get.json()
-                sha = data_json.get("sha")
-                remote_content = data_json.get("content", "").strip()
-                remote_raw = "".join(remote_content.splitlines())
-                remote_bytes = base64.b64decode(remote_raw)
-                remote_md5 = _md5(remote_bytes).hexdigest()
-                log.append(f"Remote MD5={remote_md5} Bytes={len(remote_bytes)}")
-                if remote_md5 == local_md5:
-                    remote_same = True
-            except Exception as ex_par:
-                log.append(f"Remote Parse Fehler: {ex_par}")
-        elif r_get.status_code == 404:
-            log.append("Datei existiert remote noch nicht – wird angelegt.")
-        else:
-            log.append(f"GET Fehler {r_get.status_code}: {r_get.text[:180]}")
-
-        if remote_same:
-            log.append("Unveraendert – uebersprungen.")
-            skipped += 1
-            continue
-
-        commit_msg = f"{commit_prefix} {os.path.basename(path)} {_dt.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}"
-        payload = {"message": commit_msg, "content": local_b64, "branch": branch}
-        if sha:
-            payload["sha"] = sha
-
-        r_put = requests.put(api_url, headers=headers, json=payload)
-        log.append(f"PUT {r_put.status_code}")
-        if r_put.status_code in (200, 201):
-            updated += 1
-        else:
-            log.append(f"Fehler Antwort: {r_put.text[:220]}")
-            failed += 1
-
-    log.append(f"Ergebnis: updated={updated} skipped={skipped} failed={failed}")
-    return failed == 0, log
 
 
 def render(st):
@@ -1264,60 +1119,177 @@ def render(st):
             with open(allrounds_path, "w", encoding="utf-8") as f:
                 json.dump(allrounds, f, ensure_ascii=False, indent=2)
             st.success(f"Datum {date_key} in allrounds.json eingefügt/aktualisiert.")
-
-            push_ok, push_log = _push_files_to_github_api(
-                st,
-                ["json/allrounds.json", "json/golf_df/golf_df.json"],
-                commit_prefix="Key-aus-Tag Sync",
-            )
-            if push_ok:
-                st.success("GitHub Push fuer allrounds.json und golf_df.json erfolgreich.")
-            else:
-                st.warning("GitHub Push teilweise/komplett fehlgeschlagen. Siehe Log.")
-            st.text_area("Key-aus-Tag GitHub Log", value="\n".join(push_log), height=260, key="key_to_allrounds_push_log")
         except Exception as e:
             st.error(f"Fehler: {e}")
 
     # --- GitHub API Commit für mehrere JSONs (golf_df, allrounds, abrechnung) ---
     st.markdown("---")
-    if _is_remote_push_enabled(st):
-        st.caption("Remote Push Modus: AKTIV (ENABLE_REMOTE_PUSH=true)")
-    else:
-        st.caption("Remote Push Modus: AUS (lokaler Betrieb, kein Push)")
-
     if st.button("JSON Dateien (golf_df, allrounds, abrechnung) zu GitHub committen (API)"):
-        if not _is_remote_push_enabled(st):
-            st.session_state.konf_github_api_log = "\n".join([
-                "Remote Push ist deaktiviert (ENABLE_REMOTE_PUSH=false/fehlt).",
-                "Lokaler Betrieb: kein Push ausgeführt.",
-            ])
-            st.info("Push übersprungen: lokaler Betrieb.")
+        log = []
+        files = [
+            ("json/golf_df/golf_df.json", "golf_df.json"),
+            ("json/allrounds.json", "allrounds.json"),
+            ("json/abrechnung.json", "abrechnung.json"),
+        ]
+        token = getattr(st, 'secrets', {}).get("GITHUB_TOKEN") if hasattr(st, 'secrets') else None
+        repo = (getattr(st, 'secrets', {}).get("REPO") if hasattr(st, 'secrets') else None) or "USER/REPO"
+        branch = (getattr(st, 'secrets', {}).get("BRANCH") if hasattr(st, 'secrets') else None) or "main"
+        try:
+            secret_keys = list(getattr(st, 'secrets', {}).keys()) if hasattr(st, 'secrets') else []
+            log.append(f"Secrets Keys: {secret_keys}")
+        except Exception:
+            pass
+        log.append(f"Repo={repo} Branch={branch} TokenVorhanden={bool(token)}")
+        if not token or repo == "USER/REPO":
+            st.error("GitHub Secrets fehlen (GITHUB_TOKEN / REPO).")
         else:
-            push_ok, push_log = _push_files_to_github_api(
-                st,
-                [
-                    "json/golf_df/golf_df.json",
-                    "json/allrounds.json",
-                    "json/abrechnung.json",
-                ],
-                commit_prefix="Konfig API Sync",
-            )
-            st.session_state.konf_github_api_log = "\n".join(push_log)
-            if push_ok:
-                st.success("GitHub API Push erfolgreich.")
-            else:
-                st.warning("GitHub Push teilweise/komplett fehlgeschlagen. Siehe Log.")
+            headers = {"Authorization": f"token {token}", "Accept": "application/vnd.github+json"}
+            from hashlib import md5 as _md5
+            from datetime import datetime as _dt
+            updated = 0
+            skipped = 0
+            failed = 0
+            for path, short_name in files:
+                log.append(f"--- {short_name} ---")
+                if not os.path.exists(path):
+                    log.append("Datei fehlt lokal – übersprungen.")
+                    failed += 1
+                    continue
+                try:
+                    with open(path, "rb") as f:
+                        local_bytes = f.read()
+                    local_md5 = _md5(local_bytes).hexdigest()
+                    local_b64 = base64.b64encode(local_bytes).decode()
+                    log.append(f"Local MD5={local_md5} Bytes={len(local_bytes)}")
+                except Exception as ex:
+                    log.append(f"Lesefehler: {ex}")
+                    failed += 1
+                    continue
+                api_url = f"https://api.github.com/repos/{repo}/contents/{path}"
+                sha = None
+                remote_same = False
+                r_get = requests.get(api_url, params={"ref": branch}, headers=headers)
+                log.append(f"GET {r_get.status_code}")
+                if r_get.status_code == 200:
+                    try:
+                        data_json = r_get.json()
+                        sha = data_json.get("sha")
+                        remote_content = data_json.get("content", "").strip()
+                        remote_raw = "".join(remote_content.splitlines())
+                        try:
+                            remote_bytes = base64.b64decode(remote_raw)
+                            remote_md5 = _md5(remote_bytes).hexdigest()
+                            log.append(f"Remote MD5={remote_md5} Bytes={len(remote_bytes)}")
+                            if remote_md5 == local_md5:
+                                remote_same = True
+                        except Exception as ex_md5:
+                            log.append(f"Remote MD5 Fehler: {ex_md5}")
+                    except Exception as ex_par:
+                        log.append(f"Remote Parse Fehler: {ex_par}")
+                elif r_get.status_code == 404:
+                    log.append("Datei existiert remote noch nicht – wird angelegt.")
+                else:
+                    log.append(f"GET Fehler {r_get.status_code}: {r_get.text[:180]}")
+                if remote_same:
+                    log.append("Unverändert – übersprungen.")
+                    skipped += 1
+                    continue
+                commit_msg = f"Update {short_name} {_dt.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}"
+                payload = {"message": commit_msg, "content": local_b64, "branch": branch}
+                if sha:
+                    payload["sha"] = sha
+                r_put = requests.put(api_url, headers=headers, json=payload)
+                log.append(f"PUT {r_put.status_code}")
+                if r_put.status_code in (200, 201):
+                    updated += 1
+                elif r_put.status_code == 409:
+                    log.append("409 Konflikt – Retry versuch.")
+                    # Einmal SHA nachladen und erneut
+                    r_get2 = requests.get(api_url, params={"ref": branch}, headers=headers)
+                    if r_get2.status_code == 200:
+                        try:
+                            sha2 = r_get2.json().get("sha")
+                            if sha2 and sha2 != sha:
+                                payload["sha"] = sha2
+                                r_put2 = requests.put(api_url, headers=headers, json=payload)
+                                log.append(f"Retry PUT {r_put2.status_code}")
+                                if r_put2.status_code in (200, 201):
+                                    updated += 1
+                                else:
+                                    failed += 1
+                            else:
+                                failed += 1
+                        except Exception as exr:
+                            log.append(f"Retry Fehler: {exr}")
+                            failed += 1
+                    else:
+                        failed += 1
+                else:
+                    log.append(f"Fehler Antwort: {r_put.text[:220]}")
+                    failed += 1
+            log.append(f"Ergebnis: updated={updated} skipped={skipped} failed={failed}")
+        st.text_area("GitHub API Log", value="\n".join(log), height=420)
 
-    st.text_area(
-        "GitHub API Log",
-        value=st.session_state.get("konf_github_api_log", ""),
-        height=420,
-        key="konf_github_api_log_area",
-    )
-
-    # --- Lokaler Git Push bewusst deaktiviert ---
+    # --- Bulk Git Commit aller Änderungen (nutzt lokales Git) ---
     st.markdown("---")
-    st.caption("Lokaler Git Push ist deaktiviert. Push erfolgt nur im Serverbetrieb per API.")
+    if st.button("Alle Änderungen committen & pushen (git)"):
+        log = []
+        token = getattr(st, 'secrets', {}).get("GITHUB_TOKEN") if hasattr(st, 'secrets') else None
+        repo = (getattr(st, 'secrets', {}).get("REPO") if hasattr(st, 'secrets') else None) or "maburgae/Gruppo-App"
+        branch = (getattr(st, 'secrets', {}).get("BRANCH") if hasattr(st, 'secrets') else None) or "main"
+        def run(cmd, hide=False):
+            try:
+                res = subprocess.run(cmd, capture_output=True, text=True, check=False)
+                if not hide:
+                    log.append(f"$ {' '.join(cmd)}\n{res.stdout}{res.stderr}")
+                return res.returncode, res.stdout.strip()
+            except Exception as e:
+                log.append(f"FEHLER {' '.join(cmd)} -> {e}")
+                return 1, ""
+        # Prüfen ob Git Repo
+        rc_repo, _ = run(["git", "rev-parse", "--is-inside-work-tree"])
+        if rc_repo != 0:
+            st.error("Kein Git-Repository verfügbar.")
+        else:
+            if not token:
+                st.error("GITHUB_TOKEN Secret fehlt.")
+            else:
+                # Remote URL mit Token setzen (Token nicht ins Log schreiben!)
+                safe_remote = f"https://x-access-token:***@github.com/{repo}.git"
+                real_remote = f"https://x-access-token:{token}@github.com/{repo}.git"
+                subprocess.run(["git", "remote", "set-url", "origin", real_remote], check=False)
+                log.append(f"Remote gesetzt: {safe_remote}")
+                # Git Identity sicherstellen
+                rc_name, name_val = run(["git", "config", "user.name"], hide=True)
+                rc_mail, mail_val = run(["git", "config", "user.email"], hide=True)
+                if rc_name != 0 or not name_val:
+                    run(["git", "config", "user.name", "Gruppo Streamlit Bot"])
+                else:
+                    log.append(f"Git user.name vorhanden: {name_val}")
+                if rc_mail != 0 or not mail_val:
+                    run(["git", "config", "user.email", "gruppo-bot@example.local"])
+                else:
+                    log.append(f"Git user.email vorhanden: {mail_val}")
+                # Status anzeigen
+                run(["git", "status", "-s"])
+                # Änderungen hinzufügen
+                run(["git", "add", "-A"])
+                # Prüfen ob etwas zu committen ist
+                rc_diff, diff_out = run(["git", "diff", "--cached", "--name-only"], hide=True)
+                changed = [l for l in diff_out.splitlines() if l.strip()]
+                if not changed:
+                    log.append("Keine Änderungen zum Commit.")
+                else:
+                    from datetime import datetime as _dt
+                    msg = f"Bulk commit via Streamlit {_dt.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}"
+                    run(["git", "commit", "-m", msg])
+                    # Push
+                    rc_push, _ = run(["git", "push", "origin", branch])
+                    if rc_push == 0:
+                        st.success("Bulk Push erfolgreich.")
+                    else:
+                        st.error("Bulk Push fehlgeschlagen.")
+        st.text_area("Bulk Git Log", value="\n".join(log), height=320)
 
     # Ausgabefeld "Output"
     text15("Output")
