@@ -402,17 +402,11 @@ def create_default_golf_json(json_path: str, datum: str, ort: str, spieler_list:
 def copy_scorecard_to_golf_df(source_json_path, target_json_path):
     """
     Copies 'Hole', 'Par', 'Hcp', and all player score arrays from source_json_path (Vision model output)
-    to target_json_path (e.g., golf_df.json), making a timestamped backup of the target file before overwriting.
+    to target_json_path (e.g., golf_df.json).
     Player scores are written to the 'Score' key inside the 'Spieler' dict under the correct date key in the target JSON.
     If the AI JSON contains only a subset of holes, only those holes are updated and all other holes are preserved.
-    Backup file will have .json extension.
     Returns a dict with merge metadata (updated holes, date key, mode).
     """
-    # Make backup of target file
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    backup_path = f"{target_json_path}_backup_{timestamp}.json"
-    shutil.copy2(target_json_path, backup_path)
-
     # Load source and target JSONs
     with open(source_json_path, "r", encoding="utf-8") as f:
         source = json.load(f)
@@ -429,7 +423,6 @@ def copy_scorecard_to_golf_df(source_json_path, target_json_path):
             "date_key": None,
             "updated_holes": [],
             "mapping_mode": "none",
-            "backup_path": backup_path,
         }
 
     def _pad18(vals, fill=None):
@@ -492,13 +485,12 @@ def copy_scorecard_to_golf_df(source_json_path, target_json_path):
     # Save updated target
     with open(target_json_path, "w", encoding="utf-8") as f:
         json.dump(target, f, ensure_ascii=False, indent=2)
-    print(f"Scorecard data copied from {source_json_path} to {target_json_path}. Backup saved as {backup_path}.")
+    print(f"Scorecard data copied from {source_json_path} to {target_json_path}.")
     return {
         "ok": True,
         "date_key": date_key,
         "updated_holes": [idx + 1 for idx in sorted(set(hole_indices))],
         "mapping_mode": mapping_mode,
-        "backup_path": backup_path,
     }
 
 def calculate_money_for_players(json_path: str, date_key: str):

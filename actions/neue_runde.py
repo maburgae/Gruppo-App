@@ -1,5 +1,5 @@
 import json
-from datetime import date, datetime
+from datetime import datetime
 
 def main(
     players: list[str] | None = None,
@@ -29,15 +29,8 @@ def main(
             golf_data = json.load(f)
     except FileNotFoundError:
         golf_data = None
-    # Create a copy with date and time extended
-    dt_str = datetime.now().strftime("%Y%m%d_%H%M%S")
-    copy_path = f"json/golf_df/golf_df_copy_{dt_str}.json"
-    if golf_data is not None:
-        with open(copy_path, "w", encoding="utf-8") as f:
-            json.dump(golf_data, f, ensure_ascii=False, indent=2)
-        print(f"Copy of golf JSON written to {copy_path}")
-    else:
-        print(f"No golf_df.json found to copy.")
+    if golf_data is None:
+        print("No golf_df.json found. Creating a new default round file.")
 
     # Build default round data
     round_data = {
