@@ -404,7 +404,9 @@ def copy_scorecard_to_golf_df(source_json_path, target_json_path):
     Copies 'Hole', 'Par', 'Hcp', and all player score arrays from source_json_path (Vision model output)
     to target_json_path (e.g., golf_df.json), making a timestamped backup of the target file before overwriting.
     Player scores are written to the 'Score' key inside the 'Spieler' dict under the correct date key in the target JSON.
+    If the AI JSON contains only a subset of holes, only those holes are updated and all other holes are preserved.
     Backup file will have .json extension.
+    Returns a dict with merge metadata (updated holes, date key, mode).
     """
     # Make backup of target file
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -422,16 +424,68 @@ def copy_scorecard_to_golf_df(source_json_path, target_json_path):
     date_key = today if today in target else next((k for k in target.keys() if k not in ["Hole", "Par", "Hcp"]), None)
     if not date_key:
         print("No valid date key found in target JSON.")
-        return
+        return {
+            "ok": False,
+            "date_key": None,
+            "updated_holes": [],
+            "mapping_mode": "none",
+            "backup_path": backup_path,
+        }
 
-    # Copy keys
-    for key in ["Hole", "Par", "Hcp"]:
-        if key in source:
-            target[date_key][key] = source[key]
-    # Copy all player score arrays to 'Score' in 'Spieler' under date_key
+    def _pad18(vals, fill=None):
+        out = list(vals or [])
+        while len(out) < 18:
+            out.append(fill)
+        return out[:18]
+
+    def _to_hole_index(hole_val):
+        try:
+            hole_no = int(hole_val)
+        except Exception:
+            return None
+        if 1 <= hole_no <= 18:
+            return hole_no - 1
+        return None
+
+    source_holes = source.get("Hole")
+    hole_indices = []
+    mapping_mode = "hole_numbers"
+    if isinstance(source_holes, list) and source_holes:
+        for hv in source_holes:
+            idx = _to_hole_index(hv)
+            if idx is not None:
+                hole_indices.append(idx)
+    if not hole_indices:
+        # Fallback: positional merge when no usable hole numbers are provided.
+        mapping_mode = "positional"
+        fallback_len = max(
+            len(source.get("Par") or []),
+            len(source.get("Hcp") or []),
+            *(len(v) for k, v in source.items() if k not in ["Hole", "Par", "Hcp"] and isinstance(v, list)),
+            0,
+        )
+        hole_indices = list(range(min(18, fallback_len)))
+
+    def _merge_array(existing_vals, new_vals):
+        merged = _pad18(existing_vals, fill=None)
+        if not isinstance(new_vals, list):
+            return merged
+        for src_pos, target_idx in enumerate(hole_indices):
+            if src_pos >= len(new_vals):
+                continue
+            merged[target_idx] = new_vals[src_pos]
+        return merged
+
+    # Merge course arrays and keep untouched holes.
+    target[date_key]["Hole"] = _merge_array(target[date_key].get("Hole", list(range(1, 19))), source.get("Hole"))
+    target[date_key]["Par"] = _merge_array(target[date_key].get("Par"), source.get("Par"))
+    target[date_key]["Hcp"] = _merge_array(target[date_key].get("Hcp"), source.get("Hcp"))
+
+    # Copy all player score arrays to 'Score' in 'Spieler' under date_key (subset merge).
     for player in [k for k in source.keys() if k not in ["Hole", "Par", "Hcp"]]:
         if "Spieler" in target[date_key] and player in target[date_key]["Spieler"]:
-            target[date_key]["Spieler"][player]["Score"] = source[player]
+            old_scores = target[date_key]["Spieler"][player].get("Score")
+            target[date_key]["Spieler"][player]["Score"] = _merge_array(old_scores, source[player])
         else:
             print(f"Warning: Player '{player}' not found in target[date_key]['Spieler'].")
 
@@ -439,6 +493,13 @@ def copy_scorecard_to_golf_df(source_json_path, target_json_path):
     with open(target_json_path, "w", encoding="utf-8") as f:
         json.dump(target, f, ensure_ascii=False, indent=2)
     print(f"Scorecard data copied from {source_json_path} to {target_json_path}. Backup saved as {backup_path}.")
+    return {
+        "ok": True,
+        "date_key": date_key,
+        "updated_holes": [idx + 1 for idx in sorted(set(hole_indices))],
+        "mapping_mode": mapping_mode,
+        "backup_path": backup_path,
+    }
 
 def calculate_money_for_players(json_path: str, date_key: str):
     """

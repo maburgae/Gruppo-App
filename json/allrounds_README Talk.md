@@ -48,6 +48,9 @@ Hinweise:
 - Listen haben immer Länge 18 (für 18 Löcher), sofern definiert.
 - `Flight` kann benutzt werden, um Spieler gruppenweise (z. B. Flight 1 / Flight 2) auszuwerten.
 - Wenn man von Schlägen pro Runde spricht, oder (Gesamt score) dann ist das nicht die Anzahl der Schläge addiert, sondern Par Summe des Platzes plus gespielters Hcp. Wenn man die Schläge addieren würde ginge das nicht bei Löchern, ohne Score/Strich
+- wenn man von Scramble spricht, dann ist damit gemeint, dass an einem Loch der beste Score gezählt wird von allen Spielern, die der Runde mitgespielt haben
+- Wenn man innerhalb einer Runde von allen Spielern spricht, dann meint er mit einem Spieler, die eine Detail genommen haben, nicht alle Spieler, die ausgewertet werden kann
+
 
 # Beschreibung der Datei Destinations.json
 Die Datei enthält die Destinationen der jährlichen Reise. Das kann eine Stadt, Land oder Region sein. Du kannst das in Deine Rückmeldungen einfließen lassen, wenn möglich.

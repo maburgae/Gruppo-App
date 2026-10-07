@@ -49,6 +49,19 @@ def main(image_path: str | None = None, pre_process: bool = True, model_name: st
 
     # Run vision query and copy into the day json
     success = query_vision_model(image_id, scorecard_path, gpt_model, prompt)
-    copy_scorecard_to_golf_df(scorecard_path, day_path)
+    merge_info = copy_scorecard_to_golf_df(scorecard_path, day_path)
 
-    return success
+    if not success:
+        return "AI-Antwort war kein gueltiges JSON. Keine Aktualisierung uebernommen."
+
+    updated_holes = []
+    mapping_mode = "unknown"
+    if isinstance(merge_info, dict):
+        updated_holes = merge_info.get("updated_holes") or []
+        mapping_mode = merge_info.get("mapping_mode", "unknown")
+
+    if updated_holes:
+        holes_label = ",".join(str(h) for h in updated_holes)
+        return f"Upload erfolgreich. Aktualisierte Loecher: [{holes_label}] (Mapping: {mapping_mode})."
+
+    return "Upload erfolgreich. Keine Lochdaten zum Aktualisieren gefunden."
