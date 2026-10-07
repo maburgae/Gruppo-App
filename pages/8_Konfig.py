@@ -783,6 +783,54 @@ def render(st):
     current_hcp = _norm_list(data.get("Hcp", []))
     all_players_map = data.get("Spieler", {}) or {}
 
+    # Sofort-Sync: Platzname + Spieler/Fights direkt nach UI-Aenderungen speichern
+    instant_meta_changed = False
+
+    ort_input_now = st.session_state.get("konf_platzname", "")
+    if isinstance(ort_input_now, str):
+        ort_input_now = ort_input_now.strip()
+    else:
+        ort_input_now = ""
+    current_ort = data.get("Ort")
+    current_ort = current_ort.strip() if isinstance(current_ort, str) else ""
+    if ort_input_now != current_ort:
+        data["Ort"] = ort_input_now
+        instant_meta_changed = True
+
+    for player in ui_players:
+        checked = player in selected_players
+        flight_state_key = f"flight_{player}"
+        flight_val = st.session_state.get(flight_state_key, "1")
+        if isinstance(flight_val, str):
+            flight_val = flight_val.strip()
+        if flight_val not in ("1", "2"):
+            flight_val = "1"
+
+        pdata = all_players_map.get(player)
+        if checked:
+            if not isinstance(pdata, dict):
+                all_players_map[player] = {
+                    "Flight": flight_val,
+                    "Score": [None] * 18,
+                }
+                instant_meta_changed = True
+            else:
+                if pdata.get("Flight") != flight_val:
+                    pdata["Flight"] = flight_val
+                    instant_meta_changed = True
+        else:
+            # Nur inaktiven, leeren Eintrag entfernen (gespielte / no-show Daten bleiben erhalten)
+            if isinstance(pdata, dict) and player not in no_show_set:
+                has_score = _has_numeric_score(pdata)
+                has_other_values = any(
+                    pdata.get(k) not in (None, "", 0)
+                    for k in ("DayHcp", "Netto", "Gesp.Hcp", "Birdies", "Pars", "Bogies", "Strich", "Platz", "Ladies", "LD", "N2TP")
+                )
+                money_val = _to_int_money(pdata.get("Geld"))
+                if (not has_score) and (not has_other_values) and money_val == 0:
+                    all_players_map.pop(player, None)
+                    instant_meta_changed = True
+
     # No-show Spieler (ohne numerischen Score) nicht als reguläre Spieler behandeln
     players_present = [
         player
@@ -804,6 +852,13 @@ def render(st):
     if no_show_cleanup_changed:
         with open("json/golf_df/golf_df.json", "w", encoding="utf-8") as f:
             json.dump(golf_data, f, ensure_ascii=False, indent=2)
+
+    if instant_meta_changed:
+        with open("json/golf_df/golf_df.json", "w", encoding="utf-8") as f:
+            json.dump(golf_data, f, ensure_ascii=False, indent=2)
+        st.session_state["konf_flash_msg"] = "Konfig sofort gespeichert."
+        st.rerun()
+
     current_scores = {
         player: _norm_list(data["Spieler"].get(player, {}).get("Score", []))
         for player in players_present
