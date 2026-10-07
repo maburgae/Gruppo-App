@@ -9,7 +9,11 @@ no shows in allrounds json eintragen
 
 anzeige anzahl schläge mit salso
 
-Simulate the scores in 2002 from the infos available
+
+In the allrounds.json file. There are rounds where only the head data is available. like Gesp. Hcp, Pars, etc.
+Simulate the Par, Hcp and Scores for this rounds for every player. Put Par and Hcp in the file and then invents score that the overall result is exactly reflected like Gesp. Hcp, Pars, Bogies, Strich.
+
+Here are the courses you need to add the numbers to the json:
 
 Mennagio:
 Hole	1	2	3	4	5	6	7	8	9	
@@ -20,12 +24,9 @@ Hole	10	11	12	13	14	15	16	17	18
 Par	    3	4	4	5	5	3	4	4	4
 Hcp	    6	4	10	12	8	16	2	14	18	
 
-D'Este see json
+D'Este and Varese are in the json already at another day. Take Pars and Hcps from there.
 
-Lindau make assumptions
-Verona make assumptions
+For Lindau, Verona and Rovedine make assumptions for Par and Hcp like at a tyical Golf course.
 
-Varese see json
+Check if all empty rounds are now considered.
 
-
-Rovedind
