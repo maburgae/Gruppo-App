@@ -52,6 +52,8 @@ Hinweise:
 - Wenn man innerhalb einer Runde von allen Spielern spricht, dann meint er mit einem Spieler, die eine Detail genommen haben, nicht alle Spieler, die ausgewertet werden kann
 - Ein Strich bedeutet 0 Nettopunkte an einem Loch, nicht unbedingt nur x. Wenn jemand mit DayHcp 18 eine 7 spielt an Par 3, dann ist da auch ein Strich.
 - x oder - ist ohne Wertung. Nicht ohne Wertung mit Strich verwechseln.
+- Wenn Schläge an einem Loch gezählt werden soll und das Loch mit 0, null, Strich oder ähnliches gewertet wurde, dann gilt folgende Formel:
+  Schläger = Parvorgabe Loch + 2 + DayHcp des Spieler // 18 + (1 if Loch Hcp <= DayHcp des Spieler % 18 else 0)
 
 
 # Beschreibung der Datei Destinations.json
