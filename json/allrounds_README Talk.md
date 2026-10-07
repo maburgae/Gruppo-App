@@ -58,3 +58,5 @@ Die Datei enthält die Destinationen der jährlichen Reise. Das kann eine Stadt,
 # Beschreibung der Datei DayHcp.json
 Es wird nach jeder Runde ein internes Handicap für jeden Spieler berechnet. Diese steht in dieser Datei. Die nächste Runde wird gegen dieses Hcp gewertet, sprich die Nettopunkte berechnet. Das interne Hcp ist immer der mittelwert der letzten 6 gepsielten Runden.
 Im allrounds.json ist es DayHcp
+
+GENERIERE IMMER EIN PYTHON SCRIPT, WENN MÖGLICH. VERSUCHE NICHT DIE INFORMATIONEN DIRECT AUS DEN EINSEHBAREN DATEN ZU ZIEHEN!
