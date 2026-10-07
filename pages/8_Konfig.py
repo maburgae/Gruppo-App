@@ -3,7 +3,7 @@ import os
 import base64
 import requests
 import subprocess  # für Bulk Git Commit
-from datetime import date
+from datetime import date, datetime
 from html import escape
 
 from actions.neue_runde import main as neue_runde_main
@@ -613,6 +613,61 @@ def render(st):
         else:
             st.stop()
 
+    # Aktuelle Runde laden (Quelle fuer alle Vorbelegungen)
+    with open("json/golf_df/golf_df.json", "r", encoding="utf-8") as f:
+        golf_data = json.load(f)
+    key = list(golf_data.keys())[0]
+    data = golf_data[key]
+
+    def _is_active_player_entry(pdata):
+        if not isinstance(pdata, dict):
+            return False
+        score_vals = pdata.get("Score")
+        if isinstance(score_vals, list) and any(isinstance(v, (int, float)) for v in score_vals):
+            return True
+        relevant_fields = (
+            "Flight", "DayHcp", "Netto", "Gesp.Hcp", "Birdies", "Pars", "Bogies", "Strich", "Platz", "LD", "N2TP", "Ladies"
+        )
+        for fld in relevant_fields:
+            val = pdata.get(fld)
+            if val not in (None, ""):
+                return True
+        return False
+
+    # Dynamische Spielerliste: bekannte Spieler + angelegte Spieler aus golf_df
+    default_players = []
+    try:
+        default_players = json.loads(DEFAULT_PLAYERS_STR)
+    except Exception:
+        default_players = []
+    players_obj_for_ui = data.get("Spieler", {}) or {}
+    ui_players = []
+    for pname in (ROUND_PLAYERS + default_players + list(players_obj_for_ui.keys())):
+        if isinstance(pname, str):
+            pn = pname.strip()
+            if pn and pn not in ui_players:
+                ui_players.append(pn)
+
+    # Beim Laden der Seite alle Eingabefelder aus golf_df vorbelegen (einmal pro Rundenschluessel)
+    if st.session_state.get("konf_loaded_round_key") != key:
+        ort_from_file = data.get("Ort", "")
+        st.session_state.konf_platzname = ort_from_file if isinstance(ort_from_file, str) else ""
+
+        try:
+            st.session_state.konf_round_date = datetime.strptime(key, "%d.%m.%Y").date()
+        except Exception:
+            pass
+
+        for pname in ui_players:
+            check_key = f"konf_player_{pname}"
+            flight_key = f"flight_{pname}"
+            pdata = players_obj_for_ui.get(pname, {}) or {}
+            st.session_state[check_key] = _is_active_player_entry(pdata)
+            flight_val = str(pdata.get("Flight", "")).strip()
+            st.session_state[flight_key] = flight_val if flight_val in ("1", "2") else "1"
+
+        st.session_state.konf_loaded_round_key = key
+
     text15("Konfiguration")
 
     # Eingabefeld Platzname (ohne Defaultwert)
@@ -626,8 +681,14 @@ def render(st):
     flight_values = {}
     selected_players = []
     st.markdown("<div class='compact-player-grid'>", unsafe_allow_html=True)
-    player_cols = st.columns(len(ROUND_PLAYERS), gap="small")
-    for col, pname in zip(player_cols, ROUND_PLAYERS):
+    player_cols = st.columns(len(ui_players), gap="small") if ui_players else []
+    for col, pname in zip(player_cols, ui_players):
+        check_key = f"konf_player_{pname}"
+        flight_key = f"flight_{pname}"
+        if check_key not in st.session_state:
+            st.session_state[check_key] = False
+        if flight_key not in st.session_state or st.session_state[flight_key] not in ("1", "2"):
+            st.session_state[flight_key] = "1"
         checked = col.checkbox(pname, key=f"konf_player_{pname}")
         col.selectbox("Flight", options=["1", "2"], key=f"flight_{pname}", label_visibility="collapsed")
         if checked:
@@ -681,10 +742,6 @@ def render(st):
             st.success(f"Upload verarbeitet mit Modell: {st.session_state.get('konf_upload_model', UPLOAD_MODEL_OPTIONS[0])}")
 
     # Zwei Tabellen-Editoren (1-9 und 10-18) für Par, Hcp und Scores aller Spieler
-    with open("json/golf_df/golf_df.json", "r", encoding="utf-8") as f:
-        golf_data = json.load(f)
-    key = list(golf_data.keys())[0]
-    data = golf_data[key]
     text15("Scorecard Eingabe (Tabelle)")
 
     def _norm_list(vals, fill=None):
@@ -996,12 +1053,7 @@ def render(st):
         st.rerun()
 
     # No-show Geld hinzufügen (z.B. Spieler hat nicht gespielt, zahlt aber mit)
-    default_players = []
-    try:
-        default_players = json.loads(DEFAULT_PLAYERS_STR)
-    except Exception:
-        default_players = []
-    no_show_options = sorted(set(ROUND_PLAYERS + players_present + default_players + no_show_players))
+    no_show_options = sorted(set(ui_players + players_present + no_show_players))
     ns_cols = st.columns([1.2, 2.0])
     with ns_cols[1]:
         no_show_name = st.selectbox("No-show Spieler", options=no_show_options, key="konf_noshow_name")
