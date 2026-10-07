@@ -599,12 +599,12 @@ def render(st):
     # 6) Ranglisten und Scorecards (nur Runden des gewählten Jahres)
     import os
     from PIL import Image
-    # Alte kombinierte Darstellung ersetzt durch zwei Blöcke
-    text15("Ranglisten (Jahr)")
+    text15("Ranglisten und Scorecards (Jahr)")
     directory_rank = "rankings/"
     directory_sc = "scorecards/"
     rounds_rev = sorted(rounds_for_year, key=lambda kv: datetime.strptime(kv[0], "%d.%m.%Y"), reverse=True)
-    # Erst alle Rankings
+
+    # Pro Runde direkt Ranking und Scorecard hintereinander anzeigen
     for d, obj in rounds_rev:
         ort = obj.get("Ort", "")
         display_name = f"{d} ({ort})" if ort else d
@@ -618,12 +618,8 @@ def render(st):
                 pass
         else:
             st.caption("(Kein Ranking-Bild gefunden)")
-    # Dann alle Scorecards (HTML-Layout wie in Runden)
-    text15("Scorecards (Jahr)")
-    for d, obj in rounds_rev:
-        ort = obj.get("Ort", "")
-        display_name = f"{d} ({ort})" if ort else d
-        st.markdown(f"<b style='font-size:15px'>{display_name}</b>", unsafe_allow_html=True)
+
+        # Scorecard derselben Runde direkt darunter
         st.markdown(_render_scorecard_html(obj), unsafe_allow_html=True)
 
 if __name__ == "__main__":
