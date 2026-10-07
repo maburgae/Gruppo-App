@@ -13,7 +13,7 @@ from actions.tag_to_alle_runden import main as tag_to_alle_runden_main
 from actions.erzeuge_stats import main as erzeuge_stats_main
 import os
 
-DEFAULT_PLAYERS_STR = '["Marc","Andy","Bernie","Jens","Heiko","Markus","Buffy"]'
+DEFAULT_PLAYERS_STR = '["Marc","Andy","Bernie","Jens","Markus","Buffy"]'
 ROUND_PLAYERS = ["Marc", "Andy", "Bernie", "Jens", "Markus", "Buffy"]
 UPLOAD_MODEL_OPTIONS = [
     "gpt-5-mini",
