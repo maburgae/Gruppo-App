@@ -10,6 +10,12 @@ no shows in allrounds json eintragen
 anzeige anzahl schläge mit salso
 
 
+
+
+
+
+
+
 In the allrounds.json file. There are rounds where only the head data is available. like Gesp. Hcp, Pars, etc.
 Simulate the Par, Hcp and Scores for this rounds for every player. Put Par and Hcp in the file and then invents score that the overall result is exactly reflected like Gesp. Hcp, Pars, Bogies, Strich.
 

@@ -66,6 +66,18 @@ def _init_state():
     import streamlit as st
     if "konf_platzname" not in st.session_state:
         st.session_state.konf_platzname = ""
+    # Platzname beim ersten Laden aus golf_df vorbelegen, falls vorhanden.
+    if not st.session_state.konf_platzname:
+        try:
+            with open("json/golf_df/golf_df.json", "r", encoding="utf-8") as f:
+                _gdf = json.load(f)
+            if isinstance(_gdf, dict) and _gdf:
+                _k = next(iter(_gdf.keys()))
+                _ort = (_gdf.get(_k, {}) or {}).get("Ort")
+                if isinstance(_ort, str) and _ort.strip():
+                    st.session_state.konf_platzname = _ort.strip()
+        except Exception:
+            pass
     if "konf_players" not in st.session_state:
         st.session_state.konf_players = json.dumps(ROUND_PLAYERS, ensure_ascii=False)
     if "konf_file_id" not in st.session_state:
