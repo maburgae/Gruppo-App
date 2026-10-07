@@ -42,5 +42,20 @@
     ],
     "amount": 1155.0,
     "description": "Santa Clara GF"
+  },
+  {
+    "id": "37d26793-5c74-4377-858b-48da23583d21",
+    "timestamp": "2026-10-07 18:35:53",
+    "payer": "Andy",
+    "beneficiaries": [
+      "Andy",
+      "Bernie",
+      "Buffy",
+      "Jens",
+      "Marc",
+      "Markus"
+    ],
+    "amount": 500.0,
+    "description": "Testrechnung"
   }
 ]
