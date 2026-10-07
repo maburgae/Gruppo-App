@@ -2,7 +2,6 @@ import json
 import os
 import base64
 import requests
-import subprocess
 from datetime import datetime
 import pandas as pd
 import uuid  # hinzugefügt für eindeutige IDs
@@ -73,95 +72,9 @@ def _save_expenses(expenses: list):
         json.dump(expenses, f, ensure_ascii=False, indent=2)
 
 
-def _fmt_cmd_output(out: str, err: str, limit: int = 500) -> str:
-    txt = (out or "").strip()
-    etxt = (err or "").strip()
-    merged = txt if not etxt else (txt + "\n" + etxt if txt else etxt)
-    if len(merged) > limit:
-        return merged[:limit] + "..."
-    return merged
-
-
-def _git_commit_and_push_expense_file():
-    """Commit + push der Abrechnungsdatei direkt vom Streamlit-Server."""
-    debug_lines = []
-
-    def dbg(msg: str):
-        debug_lines.append(f"[{datetime.now().strftime('%H:%M:%S')}] {msg}")
-
-    if not os.path.exists(EXPENSE_FILE):
-        msg = f"Git Push fehlgeschlagen: Datei fehlt ({EXPENSE_FILE})."
-        dbg(msg)
-        return False, msg, debug_lines
-
-    try:
-        # Nur die Abrechnungsdatei stage'n
-        dbg(f"RUN: git add {EXPENSE_FILE}")
-        add_res = subprocess.run(
-            ["git", "add", EXPENSE_FILE],
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-        dbg(f"RET: {add_res.returncode} | OUT: {_fmt_cmd_output(add_res.stdout, add_res.stderr)}")
-        if add_res.returncode != 0:
-            err = (add_res.stderr or add_res.stdout or "").strip()
-            return False, f"Git add fehlgeschlagen: {err[:180]}", debug_lines
-
-        # Commit erstellen; falls keine Änderungen vorhanden sind, sauber zurückmelden
-        commit_msg = f"Update abrechnung.json {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}"
-        dbg(f"RUN: git commit -m '{commit_msg}'")
-        commit_res = subprocess.run(
-            ["git", "commit", "-m", commit_msg],
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-        dbg(f"RET: {commit_res.returncode} | OUT: {_fmt_cmd_output(commit_res.stdout, commit_res.stderr)}")
-        if commit_res.returncode != 0:
-            out = f"{commit_res.stdout}\n{commit_res.stderr}".lower()
-            if "nothing to commit" in out or "keine änderungen" in out:
-                return True, "Keine neuen Änderungen in abrechnung.json zum Committen.", debug_lines
-            err = (commit_res.stderr or commit_res.stdout or "").strip()
-            return False, f"Git commit fehlgeschlagen: {err[:180]}", debug_lines
-
-        # Branch ermitteln und pushen
-        dbg("RUN: git branch --show-current")
-        branch_res = subprocess.run(
-            ["git", "branch", "--show-current"],
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-        branch = (branch_res.stdout or "").strip() or "main"
-        dbg(f"RET: {branch_res.returncode} | branch={branch}")
-
-        dbg(f"RUN: git push origin {branch}")
-        push_res = subprocess.run(
-            ["git", "push", "origin", branch],
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-        dbg(f"RET: {push_res.returncode} | OUT: {_fmt_cmd_output(push_res.stdout, push_res.stderr)}")
-        if push_res.returncode != 0:
-            err = (push_res.stderr or push_res.stdout or "").strip()
-            return False, f"Git push fehlgeschlagen: {err[:220]}", debug_lines
-
-        return True, f"Git Commit + Push erfolgreich auf origin/{branch}.", debug_lines
-    except Exception as e:
-        dbg(f"EXCEPTION: {e}")
-        return False, f"Git Commit/Push Ausnahme: {e}", debug_lines
-
-
 def _push_expense_file_to_github(st):
-    # Primär: echter git commit+push auf dem Streamlit-Server.
-    ok_git, msg_git, dbg_git = _git_commit_and_push_expense_file()
-    if ok_git:
-        return True, msg_git, dbg_git
-
-    # Fallback auf GitHub-Contents-API (alt), falls Server-Git nicht klappt.
-    dbg_api = list(dbg_git)
+    # API-only: keine lokalen git-Kommandos auf dem Streamlit-Server.
+    dbg_api = []
 
     def api_dbg(msg: str):
         dbg_api.append(f"[{datetime.now().strftime('%H:%M:%S')}] {msg}")
@@ -169,11 +82,11 @@ def _push_expense_file_to_github(st):
     token = getattr(st, "secrets", {}).get("GITHUB_TOKEN") if hasattr(st, "secrets") else None
     repo = (getattr(st, "secrets", {}).get("REPO") if hasattr(st, "secrets") else None) or "USER/REPO"
     branch = (getattr(st, "secrets", {}).get("BRANCH") if hasattr(st, "secrets") else None) or "main"
-    api_dbg("Fallback: GitHub Contents API aktiviert")
+    api_dbg("Mode: API-only (GitHub Contents API)")
 
     if not token or repo == "USER/REPO":
         api_dbg("GITHUB_TOKEN/REPO fehlen")
-        return False, f"{msg_git} | GitHub API Push uebersprungen (GITHUB_TOKEN/REPO fehlen).", dbg_api
+        return False, "GitHub API Push uebersprungen (GITHUB_TOKEN/REPO fehlen).", dbg_api
 
     if not os.path.exists(EXPENSE_FILE):
         api_dbg(f"Datei fehlt: {EXPENSE_FILE}")
@@ -219,7 +132,7 @@ def render(st):
     if "ab_last_git_debug" not in st.session_state:
         st.session_state.ab_last_git_debug = []
 
-    with st.expander("Debug: letzter Git/Push Ablauf", expanded=False):
+    with st.expander("Debug: letzter API Push Ablauf", expanded=False):
         if st.session_state.ab_last_git_debug:
             st.code("\n".join(st.session_state.ab_last_git_debug), language="text")
         else:
