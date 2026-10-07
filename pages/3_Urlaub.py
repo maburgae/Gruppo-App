@@ -8,11 +8,21 @@ def render(st):
     st.markdown(
         """
         <style>
-        html, body, p, ol, ul, dl, span, div,
-        [data-testid='stMarkdownContainer'] p,
-        [data-testid='stMarkdownContainer'] span,
-        h1, h2, h3, h4, h5, h6,
-        [data-testid='stHeader'] h1 {
+        [data-testid='stAppViewContainer'] [data-testid='stMain'] p,
+        [data-testid='stAppViewContainer'] [data-testid='stMain'] ol,
+        [data-testid='stAppViewContainer'] [data-testid='stMain'] ul,
+        [data-testid='stAppViewContainer'] [data-testid='stMain'] dl,
+        [data-testid='stAppViewContainer'] [data-testid='stMain'] span,
+        [data-testid='stAppViewContainer'] [data-testid='stMain'] div,
+        [data-testid='stAppViewContainer'] [data-testid='stMain'] [data-testid='stMarkdownContainer'] p,
+        [data-testid='stAppViewContainer'] [data-testid='stMain'] [data-testid='stMarkdownContainer'] span,
+        [data-testid='stAppViewContainer'] [data-testid='stMain'] h1,
+        [data-testid='stAppViewContainer'] [data-testid='stMain'] h2,
+        [data-testid='stAppViewContainer'] [data-testid='stMain'] h3,
+        [data-testid='stAppViewContainer'] [data-testid='stMain'] h4,
+        [data-testid='stAppViewContainer'] [data-testid='stMain'] h5,
+        [data-testid='stAppViewContainer'] [data-testid='stMain'] h6,
+        [data-testid='stAppViewContainer'] [data-testid='stMain'] [data-testid='stHeader'] h1 {
             font-size: 15px !important;
         }
         </style>

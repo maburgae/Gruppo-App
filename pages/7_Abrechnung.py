@@ -12,7 +12,14 @@ DEFAULT_PLAYERS = ["Marc","Andy","Bernie","Jens","Markus","Buffy"]
 
 STYLE_CSS = """
 <style>
-html, body, p, span, div, label, .stButton > button, .stTextInput label, .stSelectbox label, .stCheckbox label {font-size:15px !important;}
+[data-testid='stAppViewContainer'] [data-testid='stMain'] p,
+[data-testid='stAppViewContainer'] [data-testid='stMain'] span,
+[data-testid='stAppViewContainer'] [data-testid='stMain'] div,
+[data-testid='stAppViewContainer'] [data-testid='stMain'] label,
+[data-testid='stAppViewContainer'] [data-testid='stMain'] .stButton > button,
+[data-testid='stAppViewContainer'] [data-testid='stMain'] .stTextInput label,
+[data-testid='stAppViewContainer'] [data-testid='stMain'] .stSelectbox label,
+[data-testid='stAppViewContainer'] [data-testid='stMain'] .stCheckbox label {font-size:15px !important;}
 .stButton > button {background:#0b5ed7; color:#fff; border:1px solid #084298;}
 .stButton > button:hover {background:#0a53be; border-color:#06357a;}
 </style>

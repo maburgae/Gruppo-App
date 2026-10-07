@@ -97,17 +97,27 @@ def render(st):
     st.markdown(
         """
         <style>
-        html, body, p, ol, ul, dl, span, div,
-        [data-testid='stMarkdownContainer'] p,
-        [data-testid='stMarkdownContainer'] span,
-        h1, h2, h3, h4, h5, h6,
-        [data-testid='stHeader'] h1,
-        label,
-        .stButton > button,
-        .stDownloadButton > button,
-        .stTextInput label,
-        .stSelectbox label,
-        .stFileUploader label {
+        [data-testid='stAppViewContainer'] [data-testid='stMain'] p,
+        [data-testid='stAppViewContainer'] [data-testid='stMain'] ol,
+        [data-testid='stAppViewContainer'] [data-testid='stMain'] ul,
+        [data-testid='stAppViewContainer'] [data-testid='stMain'] dl,
+        [data-testid='stAppViewContainer'] [data-testid='stMain'] span,
+        [data-testid='stAppViewContainer'] [data-testid='stMain'] div,
+        [data-testid='stAppViewContainer'] [data-testid='stMain'] [data-testid='stMarkdownContainer'] p,
+        [data-testid='stAppViewContainer'] [data-testid='stMain'] [data-testid='stMarkdownContainer'] span,
+        [data-testid='stAppViewContainer'] [data-testid='stMain'] h1,
+        [data-testid='stAppViewContainer'] [data-testid='stMain'] h2,
+        [data-testid='stAppViewContainer'] [data-testid='stMain'] h3,
+        [data-testid='stAppViewContainer'] [data-testid='stMain'] h4,
+        [data-testid='stAppViewContainer'] [data-testid='stMain'] h5,
+        [data-testid='stAppViewContainer'] [data-testid='stMain'] h6,
+        [data-testid='stAppViewContainer'] [data-testid='stMain'] [data-testid='stHeader'] h1,
+        [data-testid='stAppViewContainer'] [data-testid='stMain'] label,
+        [data-testid='stAppViewContainer'] [data-testid='stMain'] .stButton > button,
+        [data-testid='stAppViewContainer'] [data-testid='stMain'] .stDownloadButton > button,
+        [data-testid='stAppViewContainer'] [data-testid='stMain'] .stTextInput label,
+        [data-testid='stAppViewContainer'] [data-testid='stMain'] .stSelectbox label,
+        [data-testid='stAppViewContainer'] [data-testid='stMain'] .stFileUploader label {
             font-size: 15px !important;
         }
         .compact-player-grid div[data-testid='stCheckbox'] {
@@ -1160,6 +1170,26 @@ def render(st):
             st.error(f"Fehler beim Speichern des No-show Eintrags: {e}")
 
     current_no_shows = _load_no_show_players()
+    if current_no_shows:
+        rm_cols = st.columns([1.2, 2.0])
+        with rm_cols[1]:
+            no_show_remove_name = st.selectbox(
+                "No-show entfernen",
+                options=current_no_shows,
+                key="konf_noshow_remove_name",
+            )
+        with rm_cols[0]:
+            remove_no_show = st.button("No-show entfernen")
+
+        if remove_no_show:
+            try:
+                remaining_no_shows = [p for p in current_no_shows if p != no_show_remove_name]
+                _save_no_show_players(remaining_no_shows)
+                st.success(f"No-show entfernt: {no_show_remove_name}")
+                st.rerun()
+            except Exception as e:
+                st.error(f"Fehler beim Entfernen des No-show Eintrags: {e}")
+
     if current_no_shows:
         st.caption("Aktuelle No-show Liste")
         st.markdown(", ".join(current_no_shows))

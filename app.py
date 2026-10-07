@@ -5,6 +5,18 @@ from pathlib import Path
 
 st.set_page_config(page_title="Gruppo App", page_icon="⛳", layout="wide", menu_items={})
 
+# Keep sidebar menu typography stable across pages.
+st.markdown(
+    """
+    <style>
+    [data-testid='stSidebarNav'] * {
+        font-size: 15px !important;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
 # Prefer redirecting to the built-in multipage 'Alltime Stats' page to avoid duplication
 try:
     # Streamlit 1.22+ provides switch_page
