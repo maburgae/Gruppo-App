@@ -1,6 +1,6 @@
 {
   "07.10.2026": {
-    "Ort": "Ganzneuer Platz",
+    "Ort": "Testplatzname",
     "Par": [
       4,
       4,
@@ -44,11 +44,11 @@
     "Spieler": {
       "Marc": {
         "Platz": 4,
-        "Netto": 43,
-        "Geld": 50,
-        "Gesp.Hcp": 24,
+        "Netto": 45,
+        "Geld": 40,
+        "Gesp.Hcp": 22,
         "Birdies": 0,
-        "Pars": 1,
+        "Pars": 2,
         "Bogies": 9,
         "Strich": 0,
         "DayHcp": 31,
@@ -77,7 +77,7 @@
           6
         ],
         "NettoP": [
-          2,
+          4,
           3,
           2,
           3,
@@ -100,7 +100,7 @@
       "Andy": {
         "Platz": 3,
         "Netto": 58,
-        "Geld": 30,
+        "Geld": 20,
         "Gesp.Hcp": 13,
         "Birdies": 0,
         "Pars": 6,
@@ -155,7 +155,7 @@
       "Bernie": {
         "Platz": 2,
         "Netto": 62,
-        "Geld": 40,
+        "Geld": 30,
         "Gesp.Hcp": 20,
         "Birdies": 1,
         "Pars": 4,
@@ -210,7 +210,7 @@
       "Jens": {
         "Platz": 1,
         "Netto": 86,
-        "Geld": 10,
+        "Geld": 0,
         "Gesp.Hcp": 16,
         "Birdies": 1,
         "Pars": 5,
@@ -263,30 +263,7 @@
         ]
       },
       "Buffy": {
-        "Geld": 50
-      },
-      "Markus": {
-        "Flight": "1",
-        "Score": [
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null
-        ]
+        "Geld": 40
       }
     },
     "Hole": [
