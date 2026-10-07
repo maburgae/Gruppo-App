@@ -1,6 +1,6 @@
 {
   "07.10.2026": {
-    "Ort": "NeuerPlatz",
+    "Ort": "Ganzneuer Platz",
     "Par": [
       4,
       4,
@@ -264,6 +264,29 @@
       },
       "Buffy": {
         "Geld": 50
+      },
+      "Markus": {
+        "Flight": "1",
+        "Score": [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ]
       }
     },
     "Hole": [

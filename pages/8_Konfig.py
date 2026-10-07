@@ -613,6 +613,9 @@ def render(st):
         else:
             st.stop()
 
+    def _mark_meta_dirty():
+        st.session_state["konf_meta_user_dirty"] = True
+
     # Aktuelle Runde laden (Quelle fuer alle Vorbelegungen)
     with open("json/golf_df/golf_df.json", "r", encoding="utf-8") as f:
         golf_data = json.load(f)
@@ -648,8 +651,37 @@ def render(st):
             if pn and pn not in ui_players:
                 ui_players.append(pn)
 
-    # Beim Laden der Seite alle Eingabefelder aus golf_df vorbelegen (einmal pro Rundenschluessel)
-    if st.session_state.get("konf_loaded_round_key") != key:
+    # Beim Laden der Seite alle Eingabefelder aus golf_df vorbelegen
+    def _file_meta_signature():
+        sig = [
+            (data.get("Ort", "") or "").strip() if isinstance(data.get("Ort", ""), str) else "",
+        ]
+        for pname in ui_players:
+            pdata = players_obj_for_ui.get(pname, {}) or {}
+            checked = _is_active_player_entry(pdata)
+            flight_val = str(pdata.get("Flight", "")).strip()
+            flight_val = flight_val if flight_val in ("1", "2") else "1"
+            sig.append((pname, checked, flight_val))
+        return tuple(sig)
+
+    def _state_meta_signature():
+        sig = [
+            (st.session_state.get("konf_platzname", "") or "").strip() if isinstance(st.session_state.get("konf_platzname", ""), str) else "",
+        ]
+        for pname in ui_players:
+            checked = bool(st.session_state.get(f"konf_player_{pname}", False))
+            flight_val = st.session_state.get(f"flight_{pname}", "1")
+            if isinstance(flight_val, str):
+                flight_val = flight_val.strip()
+            flight_val = flight_val if flight_val in ("1", "2") else "1"
+            sig.append((pname, checked, flight_val))
+        return tuple(sig)
+
+    should_prefill = st.session_state.get("konf_loaded_round_key") != key
+    if not should_prefill and not st.session_state.get("konf_meta_user_dirty", False):
+        should_prefill = _state_meta_signature() != _file_meta_signature()
+
+    if should_prefill:
         ort_from_file = data.get("Ort", "")
         st.session_state.konf_platzname = ort_from_file if isinstance(ort_from_file, str) else ""
 
@@ -667,11 +699,12 @@ def render(st):
             st.session_state[flight_key] = flight_val if flight_val in ("1", "2") else "1"
 
         st.session_state.konf_loaded_round_key = key
+        st.session_state["konf_meta_user_dirty"] = False
 
     text15("Konfiguration")
 
     # Eingabefeld Platzname (ohne Defaultwert)
-    platzname = st.text_input("Platzname", key="konf_platzname")
+    platzname = st.text_input("Platzname", key="konf_platzname", on_change=_mark_meta_dirty)
 
     # Datum für die neue Runde (default: heute, aber änderbar)
     round_date = st.date_input("Datum", key="konf_round_date")
@@ -689,8 +722,8 @@ def render(st):
             st.session_state[check_key] = False
         if flight_key not in st.session_state or st.session_state[flight_key] not in ("1", "2"):
             st.session_state[flight_key] = "1"
-        checked = col.checkbox(pname, key=f"konf_player_{pname}")
-        col.selectbox("Flight", options=["1", "2"], key=f"flight_{pname}", label_visibility="collapsed")
+        checked = col.checkbox(pname, key=f"konf_player_{pname}", on_change=_mark_meta_dirty)
+        col.selectbox("Flight", options=["1", "2"], key=f"flight_{pname}", label_visibility="collapsed", on_change=_mark_meta_dirty)
         if checked:
             selected_players.append(pname)
             flight_values[pname] = st.session_state.get(f"flight_{pname}", "1")
@@ -856,6 +889,7 @@ def render(st):
     if instant_meta_changed:
         with open("json/golf_df/golf_df.json", "w", encoding="utf-8") as f:
             json.dump(golf_data, f, ensure_ascii=False, indent=2)
+        st.session_state["konf_meta_user_dirty"] = False
         st.session_state["konf_flash_msg"] = "Konfig sofort gespeichert."
         st.rerun()
 
