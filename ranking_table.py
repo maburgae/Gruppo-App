@@ -156,15 +156,7 @@ def make_ranking_table(players: dict, save_path: str | None = None, show: bool =
 
 
 def main():
-    json_file = "json/allrounds.json"
-    with open(json_file, 'r') as file:
-        data = json.load(file)
-    for key in data.keys():
-        #if key == "06.10.2025": # Beispiel: nur für ein bestimmtes Datum
-            print(f"Key: {key}")
-            players = load_round(json_file, key)
-            #make_ranking_table(players, save_path=f"rankings/{key}.png", show=False)
-            show_scorecard(json_file, key, save_path=f"scorecards/{key}.png", show=False)
+    return "Keine automatische PNG-Erzeugung mehr. Tabellen werden als HTML gerendert."
 
 if __name__ == "__main__":
     main()

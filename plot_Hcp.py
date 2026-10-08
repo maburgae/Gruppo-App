@@ -89,7 +89,7 @@ def plot_yearly_avg_hcp(json_file: str, players: list[str], save_path: str | Non
 def main():
     json_file = "allrounds.json"   # <-- set your file name here
     players = ["Marc", "Heiko", "Andy","Buffy", "Bernie","Markus", "Jens"]  # <-- choose players here
-    save_path = "hcp_yearly.png"      # <-- set to None if you don't want to save
+    save_path = None
     show = True                       # <-- set False if you only want to save
 
     plot_yearly_avg_hcp(json_file, players, save_path, show)

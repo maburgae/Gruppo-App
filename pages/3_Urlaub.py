@@ -23,22 +23,47 @@ def render(st):
         [data-testid='stAppViewContainer'] [data-testid='stMain'] h5,
         [data-testid='stAppViewContainer'] [data-testid='stMain'] h6,
         [data-testid='stAppViewContainer'] [data-testid='stMain'] [data-testid='stHeader'] h1 {
-            font-size: 15px !important;
+            font-size: 17px !important;
         }
         </style>
         """,
         unsafe_allow_html=True,
     )
     def text15(s: str):
-        st.markdown(f"<span style='font-size:15px'>{s}</span>", unsafe_allow_html=True)
+        st.markdown(f"<span style='font-size:17px'>{s}</span>", unsafe_allow_html=True)
 
     # HTML scorecard style (same layout as Runden)
     st.markdown(
         """
         <style>
+        .yr-table {
+            border-collapse: collapse;
+            width: auto;
+            margin: 0.3rem 0 1rem 0;
+            table-layout: auto;
+        }
+        .yr-table th, .yr-table td {
+            border: 1px solid #d5d5d5;
+            padding: 0.16rem 0.2rem;
+            text-align: center;
+            font-size: 17px;
+            line-height: 1.15;
+            color: #111;
+            background: #fff;
+            white-space: nowrap;
+        }
+        .yr-table th {
+            background: #f2f2f2;
+            font-weight: 700;
+        }
+        .yr-table td:first-child,
+        .yr-table th:first-child {
+            text-align: left;
+            font-weight: 700;
+        }
         .sc-table {
             border-collapse: collapse;
-            width: 100%;
+            width: auto;
             margin: 0.3rem 0 1rem 0;
             table-layout: auto;
         }
@@ -46,7 +71,7 @@ def render(st):
             border: 1px solid #d5d5d5;
             padding: 0.12rem 0.16rem;
             text-align: center;
-            font-size: 15px;
+            font-size: 17px;
             line-height: 1.1;
             color: #111;
             background: #fff;
@@ -109,6 +134,11 @@ def render(st):
             background: transparent;
         }
         @media (max-width: 900px) {
+            .yr-table th,
+            .yr-table td {
+                font-size: clamp(9px, 2.6vw, 13px) !important;
+                padding: 0.08rem 0.10rem !important;
+            }
             .sc-table {
                 table-layout: fixed !important;
                 width: 100% !important;
@@ -211,6 +241,54 @@ def render(st):
         if netto >= 3:
             return "color:#178a2f;font-weight:700;"
         return "color:#111;font-weight:700;"
+
+    def _render_ranking_html(players):
+        cols = ["P", "Name", "Net", "Hcp", "Bird", "Par", "Bog.", "Str.", "Geld", "L", "LD", "N2"]
+
+        rows = []
+        for name, pdata in players.items():
+            rows.append({
+                "platz": pdata.get("Platz"),
+                "name": name,
+                "netto": pdata.get("Netto"),
+                "gesp": pdata.get("Gesp.Hcp"),
+                "bird": pdata.get("Birdies"),
+                "par": pdata.get("Pars"),
+                "bog": pdata.get("Bogies"),
+                "strich": pdata.get("Strich"),
+                "geld": pdata.get("Geld"),
+                "ladies": pdata.get("Ladies"),
+                "ld": pdata.get("LD"),
+                "n2tp": pdata.get("N2TP"),
+            })
+
+        def _sort_key(r):
+            p = r["platz"]
+            return (p is None, p if isinstance(p, int) else 9999, r["name"])
+
+        rows.sort(key=_sort_key)
+
+        html = []
+        html.append("<table class='rt-table'>")
+        html.append("<thead><tr>" + "".join(f"<th>{escape(c)}</th>" for c in cols) + "</tr></thead>")
+        html.append("<tbody>")
+        for r in rows:
+            html.append("<tr>")
+            html.append(f"<td>{escape(_fmt_cell(r['platz']))}</td>")
+            html.append(f"<td style='text-align:left;font-weight:700'>{escape(_fmt_cell(r['name']))}</td>")
+            html.append(f"<td>{escape(_fmt_cell(r['netto']))}</td>")
+            html.append(f"<td>{escape(_fmt_cell(r['gesp']))}</td>")
+            html.append(f"<td>{escape(_fmt_cell(r['bird']))}</td>")
+            html.append(f"<td>{escape(_fmt_cell(r['par']))}</td>")
+            html.append(f"<td>{escape(_fmt_cell(r['bog']))}</td>")
+            html.append(f"<td>{escape(_fmt_cell(r['strich']))}</td>")
+            html.append(f"<td>{escape(_fmt_cell(r['geld']))}</td>")
+            html.append(f"<td>{escape(_fmt_cell(r['ladies']))}</td>")
+            html.append(f"<td>{escape(_fmt_cell(r['ld']))}</td>")
+            html.append(f"<td>{escape(_fmt_cell(r['n2tp']))}</td>")
+            html.append("</tr>")
+        html.append("</tbody></table>")
+        return "".join(html)
 
     def _has_played_round(pdata) -> bool:
         if not isinstance(pdata, dict):
@@ -380,28 +458,18 @@ def render(st):
                 years.add(y)
         return sorted(years)
 
-    # Generic matplotlib-table renderer (same style as stats)
+    # Generic HTML table renderer for yearly summaries
     def display_table(headers, rows, title=None):
-        BODY_FS = 35
-        HEADER_FS = BODY_FS
-        SCALE_X = 1.4
-        SCALE_Y = 3.5
-        fig, ax = plt.subplots(figsize=(13.5, 0.7 + 0.75 * len(rows)))
-        ax.axis('off')
-        table = ax.table(cellText=[headers] + rows, loc='center', cellLoc='center')
-        table.auto_set_font_size(False)
-        table.set_fontsize(BODY_FS)
-        table.scale(SCALE_X, SCALE_Y)
-        # header font size
-        for j in range(len(headers)):
-            try:
-                table[(0, j)].get_text().set_fontsize(HEADER_FS)
-            except Exception:
-                pass
         if title:
             text15(title)
-        st.pyplot(fig)
-        plt.close(fig)
+        html = []
+        html.append("<table class='yr-table'>")
+        html.append("<thead><tr>" + "".join(f"<th>{escape(_fmt_cell(h))}</th>" for h in headers) + "</tr></thead>")
+        html.append("<tbody>")
+        for row in rows:
+            html.append("<tr>" + "".join(f"<td>{escape(_fmt_cell(cell))}</td>" for cell in row) + "</tr>")
+        html.append("</tbody></table>")
+        st.markdown("".join(html), unsafe_allow_html=True)
 
     # Load data and destinations, build year dropdown (newest first) with destination labels
     data = load_allrounds()
@@ -465,7 +533,7 @@ def render(st):
         rows.append(row)
     display_table(["Datum"] + year_players, rows, "Gespieltes Hcp je Runde")
 
-    # 2) Gesp.Hcp Übersicht (nur Runden im Jahr)
+    # 2) Durchschnittswerte pro Runde (inkl. Avg Gesp.Hcp) – nur Jahr
     player_hcps = {p: [] for p in year_players}
     for _, obj in rounds_for_year:
         sp = obj.get("Spieler", {})
@@ -473,17 +541,7 @@ def render(st):
             h = sp.get(p, {}).get("Gesp.Hcp")
             if isinstance(h, int):
                 player_hcps[p].append(h)
-    rows = []
-    for p in year_players:
-        vals = player_hcps[p]
-        if vals:
-            avg = sum(vals) / len(vals)
-            rows.append([p, f"{avg:.2f}", min(vals), max(vals)])
-        else:
-            rows.append([p, "No data", "No data", "No data"])
-    display_table(["Spieler", "Avg Gesp.Hcp", "Min Gesp.Hcp", "Max Gesp.Hcp"], rows, "Gesp.Hcp Übersicht (Jahr)")
 
-    # 3) Durchschnittswerte pro Runde (Birdies/Pars/Bogies/Strich) – nur Jahr
     def yearly_avgs_for(stat_key: str) -> dict:
         counts = {p: 0 for p in year_players}
         rounds = {p: 0 for p in year_players}
@@ -505,8 +563,14 @@ def render(st):
 
     rows = []
     for p in year_players:
-        rows.append([p, f"{bird[p]:.2f}", f"{pars[p]:.2f}", f"{bog[p]:.2f}", f"{stri[p]:.2f}"])
-    display_table(["Spieler", "Birdies/R", "Pars/R", "Bogies/R", "Strich/R"], rows, "Durchschnittswerte pro Runde (Jahr)")
+        vals = player_hcps[p]
+        avg_hcp = f"{(sum(vals) / len(vals)):.2f}" if vals else "No data"
+        rows.append([p, avg_hcp, f"{bird[p]:.2f}", f"{pars[p]:.2f}", f"{bog[p]:.2f}", f"{stri[p]:.2f}"])
+    display_table(
+        ["Spieler", "Avg Gesp.Hcp", "Birdies/R", "Pars/R", "Bogies/R", "Strich/R"],
+        rows,
+        "Durchschnittswerte pro Runde (Jahr)",
+    )
 
     # 4) Sonderwertungen Übersicht (Jahr) – LD %, N2TP %, Ladies/R und Gesamt
     import math
@@ -607,11 +671,7 @@ def render(st):
         plt.close(fig)
 
     # 6) Ranglisten und Scorecards (nur Runden des gewählten Jahres)
-    import os
-    from PIL import Image
     text15("Ranglisten und Scorecards (Jahr)")
-    directory_rank = "rankings/"
-    directory_sc = "scorecards/"
     rounds_rev = sorted(rounds_for_year, key=lambda kv: datetime.strptime(kv[0], "%d.%m.%Y"), reverse=True)
 
     # Pro Runde direkt Ranking und Scorecard hintereinander anzeigen
@@ -619,15 +679,11 @@ def render(st):
         ort = obj.get("Ort", "")
         display_name = f"{d} ({ort})" if ort else d
         st.markdown(f"<b style='font-size:15px'>{display_name}</b>", unsafe_allow_html=True)
-        rank_path = os.path.join(directory_rank, f"{d}.png")
-        if os.path.exists(rank_path):
-            try:
-                image_rank = Image.open(rank_path)
-                st.image(image_rank, width='stretch')
-            except Exception:
-                pass
+        players = obj.get("Spieler", {}) or {}
+        if players:
+            st.markdown(_render_ranking_html(players), unsafe_allow_html=True)
         else:
-            st.caption("(Kein Ranking-Bild gefunden)")
+            st.caption("(Keine Ranking-Daten vorhanden)")
 
         # Scorecard derselben Runde direkt darunter
         st.markdown(_render_scorecard_html(obj), unsafe_allow_html=True)

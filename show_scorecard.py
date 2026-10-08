@@ -255,7 +255,7 @@ def show_scorecard(json_file: str, date_key: str, save_path=None, show=True):
 def main():
     json_file = "json/allrounds.json"
     date_key = "07.10.2024"  # Schlüssel wie in deiner JSON
-    show_scorecard(json_file, date_key, save_path="scorecard.png", show=True)
+    show_scorecard(json_file, date_key, save_path=None, show=True)
 
 
 if __name__ == "__main__":

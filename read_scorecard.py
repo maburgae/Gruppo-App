@@ -99,5 +99,5 @@ update_round_for_date(day_path, date_key)
 calculate_money_for_players(day_path, date_key)
 
 # date_key = "22.09.2025"  # Schlüssel wie in deiner JSON
-show_scorecard(day_path, date_key, save_path="scorecard.png", show=True)
+show_scorecard(day_path, date_key, save_path=None, show=True)
 

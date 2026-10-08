@@ -1,9 +1,5 @@
-# ranking_table.py
 import json
-import matplotlib.pyplot as plt
 from pathlib import Path
-from show_scorecard import show_scorecard
-from ranking_table import make_ranking_table
 
 
 def load_round(json_file: str, date_key: str) -> dict:
@@ -19,9 +15,8 @@ def load_round(json_file: str, date_key: str) -> dict:
 
 
 def main():
-    #json_file = "json/allrounds.json"
+    # Bild-Generierung ist obsolet, da Ranking/Scorecard als HTML gerendert werden.
     json_file = "json/golf_df/golf_df.json"
-    # Erwartung: genau ein Datumsschlüssel in golf_df.json
     try:
         with open(json_file, 'r', encoding='utf-8') as f:
             data = json.load(f)
@@ -37,15 +32,7 @@ def main():
     if len(keys) != 1:
         return f"Fehler: Erwartet genau einen Schlüssel, gefunden {len(keys)}: {keys}"
 
-    date_key = keys[0]
-    try:
-        players = load_round(json_file, date_key)
-    except Exception as e:
-        return f"Fehler beim Laden der Runde: {e}"
-
-    make_ranking_table(players, save_path=f"rankings/{date_key}.png", show=False)
-    show_scorecard(json_file, date_key, save_path=f"scorecards/{date_key}.png", show=False)
-    return "Stats generated!"
+    return "Stats-Rendering läuft als HTML (keine PNG-Erzeugung)."
 
 if __name__ == "__main__":
     main()

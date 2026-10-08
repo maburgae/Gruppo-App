@@ -2,6 +2,7 @@ def render(st):
     # --- Yearly Average Hcp Plot ---
     import streamlit as st
     import plot_Hcp
+    from html import escape
 
     # Heading above the yearly average chart
     st.text("Jährliches Durchschnitts-Hcp pro Spieler")
@@ -14,6 +15,100 @@ def render(st):
     from collections import defaultdict
     from datetime import datetime
     import math
+
+    st.markdown(
+        """
+        <style>
+        .ats-table {
+            border-collapse: collapse;
+            width: auto;
+            margin: 0.3rem 0 1rem 0;
+            table-layout: auto;
+        }
+        .ats-table th, .ats-table td {
+            border: 1px solid #d5d5d5;
+            padding: 0.16rem 0.2rem;
+            text-align: center;
+            font-size: 17px;
+            line-height: 1.15;
+            color: #111;
+            background: #fff;
+            white-space: nowrap;
+        }
+        .ats-table th {
+            background: #f2f2f2;
+            font-weight: 700;
+        }
+        .ats-table td:first-child,
+        .ats-table th:first-child {
+            text-align: left;
+            font-weight: 700;
+        }
+        .ats-table.no-first-special th:first-child {
+            text-align: center;
+            font-weight: 700;
+        }
+        .ats-table.no-first-special td:first-child {
+            text-align: center;
+            font-weight: 400;
+        }
+        .ghcp-cell {
+            line-height: 1.05;
+        }
+        .ghcp-date {
+            display: block;
+            font-size: 0.86em;
+            font-weight: 400;
+        }
+        .ghcp-value {
+            display: block;
+            font-size: 1.08em;
+            font-weight: 700;
+        }
+        .ats-table tr.ats-total td {
+            font-weight: 700;
+            background: #fafafa;
+            border-top: 2px solid #9d9d9d;
+        }
+        .ats-table tr.ats-total td:first-child {
+            font-weight: 700 !important;
+        }
+        @media (max-width: 900px) {
+            .ats-table th,
+            .ats-table td {
+                font-size: clamp(9px, 2.6vw, 13px) !important;
+                padding: 0.08rem 0.10rem !important;
+            }
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    def _fmt_cell(val):
+        if val is None:
+            return ""
+        return str(val)
+
+    def _render_html_table(headers, rows, title=None, total_row_index=None, allow_html_cells=False, first_col_bold=True):
+        if title:
+            st.text(title)
+        table_class = "ats-table" if first_col_bold else "ats-table no-first-special"
+        html = []
+        html.append(f"<table class='{table_class}'>")
+        html.append("<thead><tr>" + "".join(f"<th>{escape(_fmt_cell(h))}</th>" for h in headers) + "</tr></thead>")
+        html.append("<tbody>")
+        for idx, row in enumerate(rows):
+            tr_class = " class='ats-total'" if (total_row_index is not None and idx == total_row_index) else ""
+            row_cells = []
+            for cell in row:
+                if allow_html_cells and isinstance(cell, str):
+                    row_cells.append(f"<td>{cell}</td>")
+                else:
+                    row_cells.append(f"<td>{escape(_fmt_cell(cell))}</td>")
+            html.append(f"<tr{tr_class}>" + "".join(row_cells) + "</tr>")
+        html.append("</tbody></table>")
+        st.markdown("".join(html), unsafe_allow_html=True)
 
     # --- Jährlicher Mittelwert aller Gesp.Hcp (alle Spieler) ---
     try:
@@ -99,8 +194,12 @@ def render(st):
                 if i < len(results[p]):
                     date_str, hcp = results[p][i]
                     date_fmt = datetime.strptime(date_str, "%d.%m.%Y").strftime("%d.%m.%y")
-                    # Remove mathtext formatting for table cells
-                    val = f"{date_fmt}\n{hcp}"
+                    val = (
+                        "<div class='ghcp-cell'>"
+                        f"<span class='ghcp-date'>{escape(date_fmt)}</span>"
+                        f"<span class='ghcp-value'>{escape(str(hcp))}</span>"
+                        "</div>"
+                    )
                 else:
                     val = "-"
                 row_vals.append(val)
@@ -120,51 +219,14 @@ def render(st):
             else:
                 avg_vals.append("-")
         table_data.append(avg_vals)
-        # Font size controls for GruppoHcp table
-        BODY_FS = 30   # body font size (adjust here)
-        HEADER_FS = BODY_FS  # column header font size (same as body)
-        ROW_SCALE_X = 1.35
-        ROW_SCALE_Y = 4.9 * 1.4  # +40% row height
-
-        fig, ax = plt.subplots(figsize=(len(players) * 1.8, 9.5))
-        ax.axis("off")
-        table = ax.table(
-            cellText=table_data,
-            # rowLabels removed to hide the first column with 'Round x'
-            colLabels=players,
-            loc="center",
-            cellLoc="center"
+        _render_html_table(
+            players,
+            table_data,
+            "GruppoHcp – Letzte 6 Runden",
+            total_row_index=len(table_data) - 1,
+            allow_html_cells=True,
+            first_col_bold=False,
         )
-        table.auto_set_font_size(False)
-        table.set_fontsize(BODY_FS)  # body font size applied to all cells
-        table.scale(ROW_SCALE_X, ROW_SCALE_Y)
-        # Column headers font size (same as body)
-        for j in range(len(players)):
-            try:
-                table[(-1, j)].get_text().set_fontsize(HEADER_FS)
-            except Exception:
-                pass
-        # Ensure all non-average rows are normal weight
-        try:
-            nrows = len(table_data)
-            ncols = len(players)
-            for i in range(nrows - 1):  # all except last (Average)
-                for j in range(ncols):
-                    table[(i, j)].get_text().set_fontweight('normal')
-        except Exception:
-            pass
-        # Make the last 'Average' row bold (cells only)
-        try:
-            avg_row_idx = len(table_data)  # last row index
-            ncols = len(players)
-            for j in range(ncols):
-                table[(avg_row_idx, j)].get_text().set_fontweight('bold')
-        except Exception:
-            pass
-        # Streamlit text heading above the table (no matplotlib title)
-        st.text("GruppoHcp – Letzte 6 Runden")
-        st.pyplot(fig)
-        plt.close(fig)
 
     # Display GruppoHcp Table first
     gruppo_players = ["Marc", "Heiko", "Andy", "Bernie", "Buffy", "Jens", "Markus"]
@@ -177,32 +239,9 @@ def render(st):
         data = json.load(f)
     selected_players = ["Andy", "Marc", "Bernie", "Heiko", "Markus", "Buffy", "Jens"]
 
-    # --- Helper to render generic tables with unified font sizes ---
+    # --- Helper to render generic HTML tables ---
     def display_table(headers, rows, title=None):
-        # Font size controls for other tables
-        BODY_FS = 35   # body font size (adjust here)
-        HEADER_FS = BODY_FS  # header font size; same as body per requirement
-        SCALE_X = 1.4
-        SCALE_Y = 3.5
-
-        fig, ax = plt.subplots(figsize=(13.5, 0.7 + 0.75 * len(rows)))
-        ax.axis('off')
-        table = ax.table(cellText=[headers] + rows, loc='center', cellLoc='center')
-        table.auto_set_font_size(False)
-        table.set_fontsize(BODY_FS)  # apply body font size
-        table.scale(SCALE_X, SCALE_Y)
-        # Header row uses same font size as body
-        ncols = len(headers)
-        for j in range(ncols):
-            try:
-                table[(0, j)].get_text().set_fontsize(HEADER_FS)
-            except Exception:
-                pass
-        if title:
-            # Render heading via Streamlit instead of matplotlib title
-            st.text(title)
-        st.pyplot(fig)
-        plt.close(fig)
+        _render_html_table(headers, rows, title)
 
     # --- 1+2. Combined Gesp.Hcp Table ---
     player_hcps = defaultdict(list)
@@ -452,12 +491,15 @@ def render(st):
         st.pyplot(fig)
         plt.close(fig)
 
-    # --- Absolute totals: Ladies, Birdies, Pars, Bogies ---
+    # --- Absolute totals: Ladies, Birdies, Pars, Bogies, Double/Triple Bogey, Strich ---
     # Sum absolute counts across all rounds for selected players
     totals_ladies = {p: 0 for p in selected_players}
     totals_birdies = {p: 0 for p in selected_players}
     totals_pars = {p: 0 for p in selected_players}
     totals_bogies = {p: 0 for p in selected_players}
+    totals_double_bogies = {p: 0 for p in selected_players}
+    totals_triple_bogies = {p: 0 for p in selected_players}
+    totals_strich = {p: 0 for p in selected_players}
 
     for round_obj in data.values():
         sp = round_obj.get("Spieler", {})
@@ -478,6 +520,28 @@ def render(st):
             if isinstance(gv, int):
                 totals_bogies[p] += gv
 
+            scores = pdata.get("Score")
+            pars_list = round_obj.get("Par")
+            if isinstance(scores, list) and isinstance(pars_list, list):
+                hole_count = min(len(scores), len(pars_list), 18)
+                for i in range(hole_count):
+                    sc = scores[i]
+                    par_v = pars_list[i]
+                    if not isinstance(sc, int) or not isinstance(par_v, int):
+                        continue
+                    # Ignore unclear/no-score marker (0) used as Strich.
+                    if sc <= 0:
+                        continue
+                    diff = sc - par_v
+                    if diff == 2:
+                        totals_double_bogies[p] += 1
+                    elif diff >= 3:
+                        totals_triple_bogies[p] += 1
+
+            sv = pdata.get("Strich")
+            if isinstance(sv, int):
+                totals_strich[p] += sv
+
     abs_rows = []
     for p in selected_players:
         abs_rows.append([
@@ -486,6 +550,9 @@ def render(st):
             str(totals_birdies[p]),
             str(totals_pars[p]),
             str(totals_bogies[p]),
+            str(totals_double_bogies[p]),
+            str(totals_triple_bogies[p]),
+            str(totals_strich[p]),
         ])
 
     abs_rows.append([
@@ -494,9 +561,16 @@ def render(st):
         str(sum(totals_birdies.values())),
         str(sum(totals_pars.values())),
         str(sum(totals_bogies.values())),
+        str(sum(totals_double_bogies.values())),
+        str(sum(totals_triple_bogies.values())),
+        str(sum(totals_strich.values())),
     ])
 
-    display_table(["Spieler", "Ladies", "Birdies", "Pars", "Bogies"], abs_rows, "Absolut: Ladies, Birdies, Pars, Bogies")
+    display_table(
+        ["Spieler", "Ladies", "Birdies", "Pars", "Bogies", "D-Bogey", "T-Bogey", "Strich"],
+        abs_rows,
+        "Absolut: Ladies, Birdies, Pars, Bogies, Double Bogey, Triple Bogey, Strich",
+    )
 
 if __name__ == "__main__":
     import streamlit as st

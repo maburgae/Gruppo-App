@@ -261,7 +261,7 @@ def render(st_obj):
         }
         .rt-table, .sc-table {
             border-collapse: collapse;
-            width: 100%;
+            width: auto;
             margin: 0.3rem 0 1rem 0;
         }
         .rt-table {

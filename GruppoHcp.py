@@ -111,7 +111,7 @@ def main():
 
     rounds = load_data(json_file)
     results = get_last_six_hcps(rounds, players)
-    make_table_plot(results, save_path="gruppo_hcp.png", show=True, round_avg=True)
+    make_table_plot(results, save_path=None, show=True, round_avg=True)
 
 
 if __name__ == "__main__":

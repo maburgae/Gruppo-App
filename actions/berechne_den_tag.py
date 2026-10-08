@@ -3,9 +3,7 @@ from calc_the_day import apply_dayhcps_from_json, update_round_for_date
 from DayHcp import calc_dayhcps_for_players_before_date
 from calc_the_day import update_round_for_date
 from functions import calculate_money_for_players
-from show_scorecard import show_scorecard
 import json
-from ranking_table import make_ranking_table, load_round
 import os
 
 
@@ -109,14 +107,7 @@ def main() -> str:
     # Geld berechnen
     calculate_money_for_players(day_path, date_key)
 
-    # No-show Spieler mit Tages-Maximalbetrag nachträglich einfügen (vor Bild/Diagramm-Erzeugung)
+    # No-show Spieler mit Tages-Maximalbetrag nachträglich einfügen
     _append_no_show_players_with_daily_max(day_path, date_key)
-
-    # Scorecard (Front/Back) erzeugen -> wird als <date>_front.png / <date>_back.png gespeichert
-    show_scorecard(day_path, date_key, save_path=f"scorecards/{date_key}.png", show=False)
-
-    # Optional: Ranking-Vorschau kann hier erstellt werden (Konf-Seite erzeugt es ebenfalls)
-    players = load_round(day_path, date_key)
-    make_ranking_table(players, save_path=f"rankings/{date_key}.png", show=False)
 
     return "Tag erfolgreich berechnet."

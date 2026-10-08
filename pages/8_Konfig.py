@@ -10,7 +10,6 @@ from actions.neue_runde import main as neue_runde_main
 from actions.upload_scorecard import main as upload_scorecard_main
 from actions.berechne_den_tag import main as berechne_den_tag_main
 from actions.tag_to_alle_runden import main as tag_to_alle_runden_main
-from actions.erzeuge_stats import main as erzeuge_stats_main
 import os
 
 DEFAULT_PLAYERS_STR = '["Marc","Andy","Bernie","Jens","Markus","Buffy"]'
@@ -190,7 +189,7 @@ def render(st):
         <style>
         .rt-table, .sc-table {
             border-collapse: collapse;
-            width: 100%;
+            width: auto;
             margin: 0.3rem 0 1rem 0;
         }
         .rt-table {
@@ -1200,8 +1199,7 @@ def render(st):
     if st.button("Berechne den Tag"):
         try:
             result = berechne_den_tag_main()
-            result2 = erzeuge_stats_main()
-            st.session_state.konf_output = f"Berechne:{result}, Pics: {result2}"
+            st.session_state.konf_output = f"Berechne: {result}"
             with open("json/golf_df/golf_df.json", "r", encoding="utf-8") as f:
                 _tag = json.load(f)
             date_key = next(iter(_tag.keys()))

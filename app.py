@@ -1,9 +1,6 @@
 import streamlit as st
-import importlib
-import importlib.util
-from pathlib import Path
 
-st.set_page_config(page_title="Gruppo App", page_icon="⛳", layout="wide", menu_items={})
+st.set_page_config(page_title="Alltime Stats", page_icon="⛳", layout="wide", menu_items={})
 
 # Keep sidebar menu typography stable across pages.
 st.markdown(
@@ -17,26 +14,20 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# Prefer redirecting to the built-in multipage 'Alltime Stats' page to avoid duplication
-try:
-    # Streamlit 1.22+ provides switch_page
-    st.switch_page("pages/1_Alltime_Stats.py")
-except Exception:
-    # Fallback: render Stats content on the main 'app' page
+def _mk_page(path: str, title: str, url_path: str, default: bool = False):
     try:
-        # load by path (renamed file)
-        stats_path = Path(__file__).parent / "pages" / "1_Alltime_Stats.py"
-        if stats_path.exists():
-            spec = importlib.util.spec_from_file_location("stats_page", str(stats_path))
-            stats_module = importlib.util.module_from_spec(spec)
-            assert spec and spec.loader
-            spec.loader.exec_module(stats_module)
-        else:
-            stats_module = None
-    except Exception:
-        stats_module = None
+        return st.Page(path, title=title, url_path=url_path, default=default)
+    except TypeError:
+        # Fallback for Streamlit variants without url_path/default params.
+        return st.Page(path, title=title)
 
-    if stats_module and hasattr(stats_module, "render") and callable(stats_module.render):
-        stats_module.render(st)
-    else:
-        st.error("Seite 'Alltime Stats' hat keine gültige render(st)-Funktion.")
+
+navigation = st.navigation([
+    _mk_page("alltime_stats_page.py", "Alltime Stats", "Alltime_Stats", default=True),
+    _mk_page("pages/2_Runden.py", "Runden", "Runden"),
+    _mk_page("pages/3_Urlaub.py", "Urlaub", "Urlaub"),
+    _mk_page("pages/7_Abrechnung.py", "Abrechnung", "Abrechnung"),
+    _mk_page("pages/8_Konfig.py", "Konfig", "Konfig"),
+])
+
+navigation.run()
