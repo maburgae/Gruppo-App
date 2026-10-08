@@ -22,6 +22,26 @@ STYLE_CSS = """
 [data-testid='stAppViewContainer'] [data-testid='stMain'] .stCheckbox label {font-size:15px !important;}
 .stButton > button {background:#0b5ed7; color:#fff; border:1px solid #084298;}
 .stButton > button:hover {background:#0a53be; border-color:#06357a;}
+
+@media (max-width: 900px) {
+    /* Keep checkbox rows in 3 columns on mobile instead of collapsing to 1 column. */
+    [data-testid='stHorizontalBlock']:has([data-testid='stCheckbox']) {
+        display: grid !important;
+        grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+        gap: 0.2rem 0.6rem !important;
+        align-items: start !important;
+    }
+
+    [data-testid='stHorizontalBlock']:has([data-testid='stCheckbox']) > [data-testid='column'] {
+        min-width: 0 !important;
+        width: 100% !important;
+        flex: 0 0 auto !important;
+    }
+
+    [data-testid='stHorizontalBlock']:has([data-testid='stCheckbox']) [data-testid='stCheckbox'] label {
+        white-space: nowrap;
+    }
+}
 </style>
 """
 
@@ -190,13 +210,12 @@ def render(st):
                                     pass
         except Exception:
             pass
-        if any(abs(v) > 1e-9 for v in yearly_geld.values()):
-            geld_row = {"Ausgabe": f"Monetenkuchen {current_year}"}
-            for p in players:
-                neg_val = -yearly_geld[p]
-                geld_row[p] = neg_val if abs(neg_val) > 1e-9 else 0.0
-                totals[p] += geld_row[p]
-            alloc_rows.append(geld_row)
+        geld_row = {"Ausgabe": "Monetenkuchen"}
+        for p in players:
+            neg_val = -yearly_geld[p]
+            geld_row[p] = neg_val if abs(neg_val) > 1e-9 else 0.0
+            totals[p] += geld_row[p]
+        alloc_rows.append(geld_row)
         total_row = {"Ausgabe": "Gesamt"}
         for p in players:
             total_row[p] = totals[p]
@@ -251,9 +270,13 @@ def render(st):
     payer = st.selectbox("Bezahlt von", players, key="abrechnung_payer")
     st.markdown("Betroffene / Profitierer:")
     beneficiary_flags = {}
-    cols = st.columns(min(6, max(1, len(players))))
-    for i, p in enumerate(players):
-        beneficiary_flags[p] = cols[i % len(cols)].checkbox(p, value=True, key=f"ab_ben_{p}")
+    for row_start in range(0, len(players), 3):
+        row_players = players[row_start:row_start + 3]
+        cols = st.columns(3)
+        for i in range(3):
+            if i < len(row_players):
+                p = row_players[i]
+                beneficiary_flags[p] = cols[i].checkbox(p, value=True, key=f"ab_ben_{p}")
     amount_str = st.text_input("Betrag", value="", key="ab_betrag", help="Numerischer Betrag (Komma oder Punkt)")
     descr = st.text_input("Beschreibung", value="", key="ab_descr")
     add_clicked = st.button("Ausgabe speichern")
@@ -327,10 +350,18 @@ def render(st):
                 edit_descr = st.text_input("Beschreibung (Edit)", value=e.get("description",""), key=f"edit_descr_{e['id']}")
                 st.markdown("Profitierer (Edit):")
                 ben_flags = {}
-                ben_cols = st.columns(min(6, max(1, len(players))))
                 current_bens = set(e.get("beneficiaries", []))
-                for i, p in enumerate(players):
-                    ben_flags[p] = ben_cols[i % len(ben_cols)].checkbox(p, value=(p in current_bens), key=f"edit_ben_{e['id']}_{p}")
+                for row_start in range(0, len(players), 3):
+                    row_players = players[row_start:row_start + 3]
+                    ben_cols = st.columns(3)
+                    for i in range(3):
+                        if i < len(row_players):
+                            p = row_players[i]
+                            ben_flags[p] = ben_cols[i].checkbox(
+                                p,
+                                value=(p in current_bens),
+                                key=f"edit_ben_{e['id']}_{p}",
+                            )
                 save_edit = st.button("Änderungen speichern", key=f"save_edit_{e['id']}")
                 cancel_edit = st.button("Abbrechen", key=f"cancel_edit_{e['id']}")
                 if save_edit:
