@@ -47,7 +47,7 @@ def _netto_style(netto):
 
 
 def _render_ranking_html(players):
-    cols = ["P", "Name", "Net", "Hcp", "Bird", "Par", "Bog.", "Str.", "Geld", "L", "LD", "N2"]
+    cols = ["P", "Name", "Net", "Hcp", "Bird", "Par", "Bog.", "Str.", "Geld", "L"]
 
     rows = []
     for name, pdata in players.items():
@@ -62,8 +62,6 @@ def _render_ranking_html(players):
             "strich": pdata.get("Strich"),
             "geld": pdata.get("Geld"),
             "ladies": pdata.get("Ladies"),
-            "ld": pdata.get("LD"),
-            "n2tp": pdata.get("N2TP"),
         })
 
     def _sort_key(r):
@@ -88,11 +86,35 @@ def _render_ranking_html(players):
         html.append(f"<td>{escape(_fmt_cell(r['strich']))}</td>")
         html.append(f"<td>{escape(_fmt_cell(r['geld']))}</td>")
         html.append(f"<td>{escape(_fmt_cell(r['ladies']))}</td>")
-        html.append(f"<td>{escape(_fmt_cell(r['ld']))}</td>")
-        html.append(f"<td>{escape(_fmt_cell(r['n2tp']))}</td>")
         html.append("</tr>")
     html.append("</tbody></table>")
     return "".join(html)
+
+
+def _is_special_mark(v):
+    if v is None:
+        return False
+    if isinstance(v, bool):
+        return v
+    if isinstance(v, (int, float)):
+        return v != 0
+    if isinstance(v, str):
+        s = v.strip()
+        return s != "" and s != "0"
+    return False
+
+
+def _render_specials_line(players):
+    ld_names = [name for name, pdata in players.items() if _is_special_mark((pdata or {}).get("LD"))]
+    n2_names = [name for name, pdata in players.items() if _is_special_mark((pdata or {}).get("N2TP"))]
+    ld_txt = ", ".join(ld_names) if ld_names else "-"
+    n2_txt = ", ".join(n2_names) if n2_names else "-"
+    return (
+        "<div style='font-size:15px;margin:0.15rem 0 0.55rem 0'>"
+        f"Longest Drive: <b>{escape(ld_txt)}</b>&nbsp;&nbsp;&nbsp;&nbsp;"
+        f"N2TP: <b>{escape(n2_txt)}</b>"
+        "</div>"
+    )
 
 
 def _render_scorecard_html(round_data):
@@ -116,7 +138,7 @@ def _render_scorecard_html(round_data):
 
     html = []
     html.append("<table class='sc-table'>")
-    html.append("<thead><tr><th></th>")
+    html.append("<thead><tr><th>Hole</th>")
     for h in holes[:9]:
         html.append(f"<th class='hole-col'>{h}</th>")
     html.append("<th class='sum-col'>F</th>")
@@ -138,14 +160,16 @@ def _render_scorecard_html(round_data):
         html.append("<tr>")
         html.append(f"<td class='left label'>{escape(label)}</td>")
         for v in values[:9]:
-            html.append(f"<td>{escape(_fmt_cell(v))}</td>")
+            cell_style = " style='font-weight:700'" if label == "Hole" else ""
+            html.append(f"<td{cell_style}>{escape(_fmt_cell(v))}</td>")
         if label in ("Hole", "Hcp"):
             out_sum = None
         else:
             out_sum = _sum_slice(values, 0, 9)
         html.append(f"<td class='sum-col'>{escape(_fmt_cell(out_sum))}</td>")
         for v in values[9:18]:
-            html.append(f"<td>{escape(_fmt_cell(v))}</td>")
+            cell_style = " style='font-weight:700'" if label == "Hole" else ""
+            html.append(f"<td{cell_style}>{escape(_fmt_cell(v))}</td>")
         if label in ("Hole", "Hcp"):
             in_sum = None
             tot_sum = None
@@ -155,7 +179,6 @@ def _render_scorecard_html(round_data):
         html.append(f"<td class='sum-col'>{escape(_fmt_cell(in_sum))}</td>")
         html.append(f"<td class='sum-col'>{escape(_fmt_cell(tot_sum))}</td></tr>")
 
-    _fixed_row("Hole", holes)
     _fixed_row("Par", pars)
     _fixed_row("Hcp", hcps)
     html.append("<tr class='sep-strong'><td colspan='23'></td></tr>")
@@ -391,7 +414,7 @@ def render(st_obj):
             }
             .rt-table th,
             .rt-table td {
-                font-size: clamp(12px, 3.4vw, 16px) !important;
+                font-size: clamp(11px, 3.4vw, 15px) !important;
                 padding: 0.12rem 0.14rem !important;
             }
             .rt-table th:nth-child(2),
@@ -409,7 +432,7 @@ def render(st_obj):
             .sc-table th,
             .sc-table td {
                 padding: 0.08rem 0.10rem !important;
-                font-size: 12px !important;
+                font-size: 11px !important;
                 box-sizing: border-box !important;
             }
             .sc-table td.left,
@@ -438,7 +461,7 @@ def render(st_obj):
         }
         @media (max-width: 900px) and (orientation: landscape) {
             .rt-table th, .rt-table td, .sc-table th, .sc-table td {
-                font-size: 14px !important;
+                font-size: 13px !important;
             }
             .sc-table th,
             .sc-table td {
@@ -482,6 +505,7 @@ def render(st_obj):
         players = rd.get("Spieler", {}) or {}
         if players:
             st_obj.markdown(_render_ranking_html(players), unsafe_allow_html=True)
+            st_obj.markdown(_render_specials_line(players), unsafe_allow_html=True)
 
             st_obj.markdown(_render_scorecard_html(rd), unsafe_allow_html=True)
         else:

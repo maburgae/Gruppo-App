@@ -82,7 +82,7 @@ def render(st):
             }
             .ats-table th,
             .ats-table td {
-                font-size: clamp(12px, 3.4vw, 16px) !important;
+                font-size: clamp(11px, 3.4vw, 15px) !important;
                 padding: 0.12rem 0.14rem !important;
                 white-space: normal !important;
                 word-break: break-word !important;
