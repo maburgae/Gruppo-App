@@ -74,10 +74,18 @@ def render(st):
             font-weight: 700 !important;
         }
         @media (max-width: 900px) {
+            .ats-table {
+                width: 100% !important;
+                table-layout: fixed !important;
+                margin-left: 0 !important;
+                margin-right: 0 !important;
+            }
             .ats-table th,
             .ats-table td {
-                font-size: clamp(9px, 2.6vw, 13px) !important;
-                padding: 0.08rem 0.10rem !important;
+                font-size: clamp(12px, 3.4vw, 16px) !important;
+                padding: 0.12rem 0.14rem !important;
+                white-space: normal !important;
+                word-break: break-word !important;
             }
         }
         </style>

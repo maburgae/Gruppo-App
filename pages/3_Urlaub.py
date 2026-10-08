@@ -61,6 +61,61 @@ def render(st):
             text-align: left;
             font-weight: 700;
         }
+        .rt-table {
+            border-collapse: collapse;
+            width: auto;
+            margin: 0.3rem 0 1rem 0;
+            table-layout: fixed;
+        }
+        .rt-table th, .rt-table td {
+            border: 1px solid #d5d5d5;
+            padding: 0.12rem 0.16rem;
+            text-align: center;
+            font-size: 17px;
+            line-height: 1.1;
+            color: #111;
+            background: #fff;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .rt-table th {
+            background: #f2f2f2;
+            font-weight: 700;
+        }
+        .rt-table th:nth-child(2),
+        .rt-table td:nth-child(2) {
+            width: 10%;
+            min-width: 10%;
+            max-width: 10%;
+            text-align: left;
+        }
+        .rt-table th:nth-child(1),
+        .rt-table td:nth-child(1),
+        .rt-table th:nth-child(3),
+        .rt-table td:nth-child(3),
+        .rt-table th:nth-child(4),
+        .rt-table td:nth-child(4),
+        .rt-table th:nth-child(10),
+        .rt-table td:nth-child(10),
+        .rt-table th:nth-child(11),
+        .rt-table td:nth-child(11),
+        .rt-table th:nth-child(12),
+        .rt-table td:nth-child(12) {
+            width: 6.5%;
+        }
+        .rt-table th:nth-child(5),
+        .rt-table td:nth-child(5),
+        .rt-table th:nth-child(6),
+        .rt-table td:nth-child(6),
+        .rt-table th:nth-child(7),
+        .rt-table td:nth-child(7),
+        .rt-table th:nth-child(8),
+        .rt-table td:nth-child(8),
+        .rt-table th:nth-child(9),
+        .rt-table td:nth-child(9) {
+            width: 7.4%;
+        }
         .sc-table {
             border-collapse: collapse;
             width: auto;
@@ -134,10 +189,41 @@ def render(st):
             background: transparent;
         }
         @media (max-width: 900px) {
+            .yr-table {
+                width: 100% !important;
+                table-layout: fixed !important;
+                margin-left: 0 !important;
+                margin-right: 0 !important;
+            }
             .yr-table th,
             .yr-table td {
-                font-size: clamp(9px, 2.6vw, 13px) !important;
-                padding: 0.08rem 0.10rem !important;
+                font-size: clamp(12px, 3.4vw, 16px) !important;
+                padding: 0.12rem 0.14rem !important;
+                white-space: normal !important;
+                word-break: break-word !important;
+            }
+            .rt-table {
+                width: 100% !important;
+                table-layout: fixed !important;
+                margin-left: 0 !important;
+                margin-right: 0 !important;
+            }
+            .rt-table th,
+            .rt-table td,
+            .sc-table th,
+            .sc-table td {
+                color: #111 !important;
+            }
+            .rt-table th,
+            .rt-table td {
+                font-size: clamp(12px, 3.4vw, 16px) !important;
+                padding: 0.12rem 0.14rem !important;
+            }
+            .rt-table th:nth-child(2),
+            .rt-table td:nth-child(2) {
+                width: 10% !important;
+                min-width: 10% !important;
+                max-width: 10% !important;
             }
             .sc-table {
                 table-layout: fixed !important;
@@ -147,8 +233,8 @@ def render(st):
             }
             .sc-table th,
             .sc-table td {
-                padding: 0.06rem 0.08rem !important;
-                font-size: 9px !important;
+                padding: 0.08rem 0.10rem !important;
+                font-size: 12px !important;
                 box-sizing: border-box !important;
                 color: #111 !important;
             }
@@ -177,6 +263,10 @@ def render(st):
             }
         }
         @media (max-width: 900px) and (orientation: landscape) {
+            .yr-table th,
+            .yr-table td,
+            .rt-table th,
+            .rt-table td,
             .sc-table th,
             .sc-table td {
                 font-size: 14px !important;

@@ -383,10 +383,16 @@ def render(st_obj):
             .rt-table th, .rt-table td, .sc-table th, .sc-table td {
                 color: #111 !important;
             }
+            .rt-table {
+                width: 100% !important;
+                table-layout: fixed !important;
+                margin-left: 0 !important;
+                margin-right: 0 !important;
+            }
             .rt-table th,
             .rt-table td {
-                font-size: clamp(9px, 2.6vw, 13px) !important;
-                padding: 0.08rem 0.10rem !important;
+                font-size: clamp(12px, 3.4vw, 16px) !important;
+                padding: 0.12rem 0.14rem !important;
             }
             .rt-table th:nth-child(2),
             .rt-table td:nth-child(2) {
@@ -402,8 +408,8 @@ def render(st_obj):
             }
             .sc-table th,
             .sc-table td {
-                padding: 0.06rem 0.08rem !important;
-                font-size: 9px !important;
+                padding: 0.08rem 0.10rem !important;
+                font-size: 12px !important;
                 box-sizing: border-box !important;
             }
             .sc-table td.left,
