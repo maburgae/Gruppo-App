@@ -57,5 +57,20 @@
     ],
     "amount": 140.0,
     "description": "Padelplatz 2 Stunden"
+  },
+  {
+    "id": "9b91b404-0535-45c0-a53b-3d987c51a3c5",
+    "timestamp": "2026-10-09 08:19:04",
+    "payer": "Bernie",
+    "beneficiaries": [
+      "Andy",
+      "Bernie",
+      "Buffy",
+      "Jens",
+      "Marc",
+      "Markus"
+    ],
+    "amount": 5837.03,
+    "description": "Haus Marbella"
   }
 ]
