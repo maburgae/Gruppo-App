@@ -6,7 +6,6 @@ import subprocess  # für Bulk Git Commit
 from datetime import date, datetime
 from html import escape
 
-from actions.neue_runde import main as neue_runde_main
 from actions.upload_scorecard import main as upload_scorecard_main
 from actions.berechne_den_tag import main as berechne_den_tag_main
 from actions.tag_to_alle_runden import main as tag_to_alle_runden_main
@@ -654,9 +653,7 @@ def render(st):
 
     _init_state()
 
-    flash_msg = st.session_state.pop("konf_flash_msg", None)
-    if flash_msg:
-        st.success(flash_msg)
+    st.session_state.pop("konf_flash_msg", None)
 
     # Simple password protection for this page
     if "konf_authed" not in st.session_state:
@@ -668,7 +665,7 @@ def render(st):
         if ok:
             if pwd == "9":
                 st.session_state.konf_authed = True
-                st.success("Eingeloggt.")
+                st.rerun()
             else:
                 st.error("Falsches Passwort.")
                 st.stop()
@@ -763,13 +760,11 @@ def render(st):
         st.session_state.konf_loaded_round_key = key
         st.session_state["konf_meta_user_dirty"] = False
 
-    text15("Konfiguration")
-
     # Eingabefeld Platzname (ohne Defaultwert)
     platzname = st.text_input("Platzname", key="konf_platzname", on_change=_mark_meta_dirty)
 
-    # Datum für die neue Runde (default: heute, aber änderbar)
-    round_date = st.date_input("Datum", key="konf_round_date")
+    # Datum bleibt editierbar (z.B. fuer manuelle Referenz)
+    st.date_input("Datum", key="konf_round_date")
 
     # Feste Spielerauswahl mit Flight-Dropdown je Spieler
     st.markdown("**Spieler**")
@@ -791,23 +786,35 @@ def render(st):
             flight_values[pname] = st.session_state.get(f"flight_{pname}", "1")
     st.markdown("</div>", unsafe_allow_html=True)
 
+    # No-show Markierung nur fuer Spieler, die nicht Teil der aktuellen Gruppe sind
+    st.markdown("**No-show (nicht in der Gruppe)**")
+    no_show_candidates = [p for p in ui_players if p not in selected_players]
+    selected_no_shows = []
+    if no_show_candidates:
+        st.markdown("<div class='compact-player-grid'>", unsafe_allow_html=True)
+        no_show_cols = st.columns(len(no_show_candidates), gap="small")
+        for col, pname in zip(no_show_cols, no_show_candidates):
+            no_show_key = f"konf_noshow_{pname}"
+            if no_show_key not in st.session_state:
+                st.session_state[no_show_key] = False
+            if col.checkbox(f"{pname} no-show fee", key=no_show_key, on_change=_mark_meta_dirty):
+                selected_no_shows.append(pname)
+        st.markdown("</div>", unsafe_allow_html=True)
+    else:
+        st.caption("Alle bekannten Spieler sind in der Gruppe.")
+
+    # Checkbox-Auswahl in separater No-show Datei halten
+    saved_no_shows = sorted(set(_load_no_show_players()))
+    selected_no_shows = sorted(set(selected_no_shows))
+    if saved_no_shows != selected_no_shows:
+        _save_no_show_players(selected_no_shows)
+
     # Kompatibel halten: JSON-String aus den gecheckten Spielern bauen
     st.session_state.konf_players = json.dumps(selected_players, ensure_ascii=False)
     st.caption(f"Spieler JSON: {st.session_state.konf_players}")
 
-    # Knopf "Neue Runde"
-    if st.button("Neue Runde"):
-        if len(selected_players) == 0:
-            st.session_state.konf_output = "Fehler: Bitte mindestens einen Spieler auswählen."
-        else:
-            date_key = round_date.strftime("%d.%m.%Y")
-            result = neue_runde_main(selected_players, flights=flight_values, ort=platzname.strip(), round_date=date_key)
-            _clear_no_show_players()
-            st.session_state.konf_output = result
-            st.success("No-show Liste für die neue Runde geleert.")
-
     # Option: Preprocess vor Upload
-    st.checkbox("Bild vor Upload vorverarbeiten (empfohlen)", key="konf_preprocess", value=st.session_state.get("konf_preprocess", True))
+    st.checkbox("Bild vor Upload vorverarbeiten", key="konf_preprocess", value=st.session_state.get("konf_preprocess", True))
     st.selectbox(
         "AI Modell (Scorecard Upload)",
         options=UPLOAD_MODEL_OPTIONS,
@@ -834,7 +841,7 @@ def render(st):
             st.session_state.konf_output = result
             st.session_state.konf_file_id = result  # Store returned file_id
             st.session_state.konf_uploaded_name = uploaded_file.name
-            st.success(f"Upload verarbeitet mit Modell: {st.session_state.get('konf_upload_model', UPLOAD_MODEL_OPTIONS[0])}")
+            st.rerun()
 
     # Zwei Tabellen-Editoren (1-9 und 10-18) für Par, Hcp und Scores aller Spieler
     text15("Scorecard Eingabe (Tabelle)")
@@ -914,24 +921,13 @@ def render(st):
                     pdata["Flight"] = flight_val
                     instant_meta_changed = True
         else:
-            # Nur inaktiven, leeren Eintrag entfernen (gespielte / no-show Daten bleiben erhalten)
-            if isinstance(pdata, dict) and player not in no_show_set:
-                has_score = _has_numeric_score(pdata)
-                has_other_values = any(
-                    pdata.get(k) not in (None, "", 0)
-                    for k in ("DayHcp", "Netto", "Gesp.Hcp", "Birdies", "Pars", "Bogies", "Strich", "Platz", "Ladies", "LD", "N2TP")
-                )
-                money_val = _to_int_money(pdata.get("Geld"))
-                if (not has_score) and (not has_other_values) and money_val == 0:
-                    all_players_map.pop(player, None)
-                    instant_meta_changed = True
+            # Sofort aus der Runde entfernen, wenn nicht angehakt und kein no-show
+            if player not in no_show_set and player in all_players_map:
+                all_players_map.pop(player, None)
+                instant_meta_changed = True
 
-    # No-show Spieler (ohne numerischen Score) nicht als reguläre Spieler behandeln
-    players_present = [
-        player
-        for player, pdata in all_players_map.items()
-        if not (player in no_show_set and not _has_numeric_score(pdata))
-    ]
+    # Tabellenzeilen folgen direkt der aktuellen Checkbox-Auswahl
+    players_present = list(selected_players)
 
     # Sicherheitsnetz: no-show Einträge in golf_df als reiner Geld-Eintrag halten
     no_show_cleanup_changed = False
@@ -953,6 +949,21 @@ def render(st):
             json.dump(golf_data, f, ensure_ascii=False, indent=2)
         st.session_state["konf_meta_user_dirty"] = False
         st.session_state["konf_flash_msg"] = "Konfig sofort gespeichert."
+        st.rerun()
+
+    if st.button("Scorecard reset"):
+        data["Par"] = [None] * 18
+        data["Hcp"] = [None] * 18
+        for player in players_present:
+            pdata = data.get("Spieler", {}).get(player)
+            if not isinstance(pdata, dict):
+                data["Spieler"][player] = {}
+                pdata = data["Spieler"][player]
+            pdata["Score"] = [None] * 18
+
+        with open("json/golf_df/golf_df.json", "w", encoding="utf-8") as f:
+            json.dump(golf_data, f, ensure_ascii=False, indent=2)
+        st.session_state["konf_flash_msg"] = "Scorecard zurueckgesetzt."
         st.rerun()
 
     current_scores = {
@@ -1095,7 +1106,6 @@ def render(st):
         st.rerun()
 
     # Extras pro Spieler: nur gespielte Spieler
-    st.caption("Ladies")
 
     def _is_marked(value):
         if isinstance(value, bool):
@@ -1131,6 +1141,7 @@ def render(st):
     new_ladies_map = dict(current_ladies_map)
 
     if played_players:
+        st.caption("Ladies")
         edited_extras = st.data_editor(
             extras_rows,
             hide_index=True,
@@ -1181,8 +1192,6 @@ def render(st):
                 index=(["-"] + played_players).index(current_n2tp_choice) if current_n2tp_choice in (["-"] + played_players) else 0,
                 key="konf_n2tp_player",
             )
-    else:
-        st.caption("Keine gespielten Spieler vorhanden.")
 
     extras_changed = new_ladies_map != current_ladies_map
     if not extras_changed:
@@ -1203,51 +1212,6 @@ def render(st):
         st.session_state["konf_flash_msg"] = "Ladies/LD/N2TP gespeichert."
         st.rerun()
 
-    # No-show Geld hinzufügen (z.B. Spieler hat nicht gespielt, zahlt aber mit)
-    no_show_options = sorted(set(ui_players + players_present + no_show_players))
-    ns_cols = st.columns([1.2, 2.0])
-    with ns_cols[1]:
-        no_show_name = st.selectbox("No-show Spieler", options=no_show_options, key="konf_noshow_name")
-    with ns_cols[0]:
-        add_no_show = st.button("No-show hinzufügen")
-
-    if add_no_show:
-        try:
-            no_show_players = _load_no_show_players()
-            if no_show_name not in no_show_players:
-                no_show_players.append(no_show_name)
-            _save_no_show_players(no_show_players)
-            st.success(f"No-show gespeichert in separater Datei: {no_show_name} (Geld wird bei Berechnung gesetzt)")
-        except Exception as e:
-            st.error(f"Fehler beim Speichern des No-show Eintrags: {e}")
-
-    current_no_shows = _load_no_show_players()
-    if current_no_shows:
-        rm_cols = st.columns([1.2, 2.0])
-        with rm_cols[1]:
-            no_show_remove_name = st.selectbox(
-                "No-show entfernen",
-                options=current_no_shows,
-                key="konf_noshow_remove_name",
-            )
-        with rm_cols[0]:
-            remove_no_show = st.button("No-show entfernen")
-
-        if remove_no_show:
-            try:
-                remaining_no_shows = [p for p in current_no_shows if p != no_show_remove_name]
-                _save_no_show_players(remaining_no_shows)
-                st.success(f"No-show entfernt: {no_show_remove_name}")
-                st.rerun()
-            except Exception as e:
-                st.error(f"Fehler beim Entfernen des No-show Eintrags: {e}")
-
-    if current_no_shows:
-        st.caption("Aktuelle No-show Liste")
-        st.markdown(", ".join(current_no_shows))
-    else:
-        st.caption("Aktuelle No-show Liste: leer")
-
     # Separate heavy computation button
     if st.button("Berechne den Tag"):
         try:
@@ -1266,50 +1230,8 @@ def render(st):
         except Exception as e:
             st.error(f"Fehler bei der Tagesberechnung: {e}")
 
-    # Download golf_df.json
-    try:
-        with open("json/golf_df/golf_df.json", "r", encoding="utf-8") as f:
-            _golfdf = f.read()
-        st.download_button(
-            label="Download golf_df.json",
-            data=_golfdf,
-            file_name="golf_df.json",
-            mime="application/json",
-            key="download_golf_df_json",
-        )
-    except Exception:
-        pass
-
-    # Download allrounds.json
-    try:
-        with open("json/allrounds.json", "r", encoding="utf-8") as f:
-            _allrounds = f.read()
-        st.download_button(
-            label="Download allrounds.json",
-            data=_allrounds,
-            file_name="allrounds.json",
-            mime="application/json",
-            key="download_allrounds_json",
-        )
-    except Exception:
-        pass
-
-    # Download abrechnung.json (Expenses)
-    try:
-        with open("json/abrechnung.json", "r", encoding="utf-8") as f:
-            _abrechnung = f.read()
-        st.download_button(
-            label="Download abrechnung.json",
-            data=_abrechnung,
-            file_name="abrechnung.json",
-            mime="application/json",
-            key="download_abrechnung_json",
-        )
-    except Exception:
-        pass
-
     # Neuer Knopf: Schlüssel aus golf_df nach allrounds.json übernehmen
-    if st.button("Key aus Tag in allrounds.json übernehmen"):
+    if st.button("Runde in die Datenbank übernehmen"):
         try:
             # Quelle lesen (aktueller Tag)
             with open("json/golf_df/golf_df.json", "r", encoding="utf-8") as f:
@@ -1345,8 +1267,10 @@ def render(st):
         except Exception as e:
             st.error(f"Fehler: {e}")
 
+
+
+
     # --- GitHub API Commit für mehrere JSONs (golf_df, allrounds, abrechnung) ---
-    st.markdown("---")
     if st.button("JSON Dateien (golf_df, allrounds, abrechnung) zu GitHub committen (API)"):
         log = []
         files = [
@@ -1453,6 +1377,10 @@ def render(st):
             log.append(f"Ergebnis: updated={updated} skipped={skipped} failed={failed}")
         st.text_area("GitHub API Log", value="\n".join(log), height=420)
 
+    # Ausgabefeld
+    st.text_area("Ausgabe", value=st.session_state.konf_output, key="konf_output_area", height=120)
+
+    
     # --- Bulk Git Commit aller Änderungen (nutzt lokales Git) ---
     st.markdown("---")
     if st.button("Alle Änderungen committen & pushen (git)"):
@@ -1514,10 +1442,48 @@ def render(st):
                         st.error("Bulk Push fehlgeschlagen.")
         st.text_area("Bulk Git Log", value="\n".join(log), height=320)
 
-    # Ausgabefeld "Output"
-    text15("Output")
-    st.text_area("Ausgabe", value=st.session_state.konf_output, key="konf_output_area", height=120)
+ # Download golf_df.json
+    try:
+        with open("json/golf_df/golf_df.json", "r", encoding="utf-8") as f:
+            _golfdf = f.read()
+        st.download_button(
+            label="Download golf_df.json",
+            data=_golfdf,
+            file_name="golf_df.json",
+            mime="application/json",
+            key="download_golf_df_json",
+        )
+    except Exception:
+        pass
 
+    # Download allrounds.json
+    try:
+        with open("json/allrounds.json", "r", encoding="utf-8") as f:
+            _allrounds = f.read()
+        st.download_button(
+            label="Download allrounds.json",
+            data=_allrounds,
+            file_name="allrounds.json",
+            mime="application/json",
+            key="download_allrounds_json",
+        )
+    except Exception:
+        pass
+
+    # Download abrechnung.json (Expenses)
+    try:
+        with open("json/abrechnung.json", "r", encoding="utf-8") as f:
+            _abrechnung = f.read()
+        st.download_button(
+            label="Download abrechnung.json",
+            data=_abrechnung,
+            file_name="abrechnung.json",
+            mime="application/json",
+            key="download_abrechnung_json",
+        )
+    except Exception:
+        pass
+    
 if __name__ == "__main__":
     import streamlit as st
     render(st)

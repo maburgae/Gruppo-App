@@ -1,6 +1,6 @@
 from openai import OpenAI
 import json
-from datetime import date, datetime
+from datetime import datetime
 from functions import upload_image_for_vision, query_vision_model, copy_scorecard_to_golf_df
 from preprocess_pic import preprocess
 
@@ -44,24 +44,35 @@ def main(image_path: str | None = None, pre_process: bool = True, model_name: st
     date_time = now.strftime("%d.%m.%Y %H:%M:%S")
     scorecard_path = f"json/golf_df/ai_result_{date_time}.json"
     day_path = f"json/golf_df/golf_df.json"
-    today = date.today()
-    date_key = today.strftime("%d.%m.%Y")
-
     # Run vision query and copy into the day json
     success = query_vision_model(image_id, scorecard_path, gpt_model, prompt)
-    merge_info = copy_scorecard_to_golf_df(scorecard_path, day_path)
 
     if not success:
         return "AI-Antwort war kein gueltiges JSON. Keine Aktualisierung uebernommen."
 
+    merge_info = copy_scorecard_to_golf_df(scorecard_path, day_path)
+
     updated_holes = []
+    candidate_holes = []
     mapping_mode = "unknown"
+    missing_players = []
     if isinstance(merge_info, dict):
         updated_holes = merge_info.get("updated_holes") or []
+        candidate_holes = merge_info.get("candidate_holes") or []
         mapping_mode = merge_info.get("mapping_mode", "unknown")
+        missing_players = merge_info.get("missing_players") or []
 
     if updated_holes:
         holes_label = ",".join(str(h) for h in updated_holes)
-        return f"Upload erfolgreich. Aktualisierte Loecher: [{holes_label}] (Mapping: {mapping_mode})."
+        msg = f"Upload erfolgreich. Aktualisierte Loecher: [{holes_label}] (Mapping: {mapping_mode})."
+        if missing_players:
+            msg += " Nicht in aktueller Runde vorhanden: " + ", ".join(missing_players) + "."
+        return msg
+
+    if candidate_holes:
+        msg = "Upload erfolgreich, aber keine Werte wurden geaendert (gleiche Daten wie zuvor)."
+        if missing_players:
+            msg += " Nicht in aktueller Runde vorhanden: " + ", ".join(missing_players) + "."
+        return msg
 
     return "Upload erfolgreich. Keine Lochdaten zum Aktualisieren gefunden."

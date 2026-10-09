@@ -405,7 +405,7 @@ def copy_scorecard_to_golf_df(source_json_path, target_json_path):
     to target_json_path (e.g., golf_df.json).
     Player scores are written to the 'Score' key inside the 'Spieler' dict under the correct date key in the target JSON.
     If the AI JSON contains only a subset of holes, only those holes are updated and all other holes are preserved.
-    Returns a dict with merge metadata (updated holes, date key, mode).
+    Returns a dict with merge metadata (updated holes, candidate holes, date key, mode).
     """
     # Load source and target JSONs
     with open(source_json_path, "r", encoding="utf-8") as f:
@@ -461,26 +461,46 @@ def copy_scorecard_to_golf_df(source_json_path, target_json_path):
 
     def _merge_array(existing_vals, new_vals):
         merged = _pad18(existing_vals, fill=None)
+        changed_indices = set()
         if not isinstance(new_vals, list):
-            return merged
+            return merged, changed_indices
         for src_pos, target_idx in enumerate(hole_indices):
             if src_pos >= len(new_vals):
                 continue
-            merged[target_idx] = new_vals[src_pos]
-        return merged
+            new_val = new_vals[src_pos]
+            if merged[target_idx] != new_val:
+                merged[target_idx] = new_val
+                changed_indices.add(target_idx)
+        return merged, changed_indices
+
+    changed_hole_indices = set()
 
     # Merge course arrays and keep untouched holes.
-    target[date_key]["Hole"] = _merge_array(target[date_key].get("Hole", list(range(1, 19))), source.get("Hole"))
-    target[date_key]["Par"] = _merge_array(target[date_key].get("Par"), source.get("Par"))
-    target[date_key]["Hcp"] = _merge_array(target[date_key].get("Hcp"), source.get("Hcp"))
+    merged_hole, changed = _merge_array(target[date_key].get("Hole", list(range(1, 19))), source.get("Hole"))
+    target[date_key]["Hole"] = merged_hole
+    changed_hole_indices.update(changed)
+
+    merged_par, changed = _merge_array(target[date_key].get("Par"), source.get("Par"))
+    target[date_key]["Par"] = merged_par
+    changed_hole_indices.update(changed)
+
+    merged_hcp, changed = _merge_array(target[date_key].get("Hcp"), source.get("Hcp"))
+    target[date_key]["Hcp"] = merged_hcp
+    changed_hole_indices.update(changed)
 
     # Copy all player score arrays to 'Score' in 'Spieler' under date_key (subset merge).
+    matched_players = []
+    missing_players = []
     for player in [k for k in source.keys() if k not in ["Hole", "Par", "Hcp"]]:
         if "Spieler" in target[date_key] and player in target[date_key]["Spieler"]:
             old_scores = target[date_key]["Spieler"][player].get("Score")
-            target[date_key]["Spieler"][player]["Score"] = _merge_array(old_scores, source[player])
+            merged_scores, changed = _merge_array(old_scores, source[player])
+            target[date_key]["Spieler"][player]["Score"] = merged_scores
+            changed_hole_indices.update(changed)
+            matched_players.append(player)
         else:
             print(f"Warning: Player '{player}' not found in target[date_key]['Spieler'].")
+            missing_players.append(player)
 
     # Save updated target
     with open(target_json_path, "w", encoding="utf-8") as f:
@@ -489,8 +509,11 @@ def copy_scorecard_to_golf_df(source_json_path, target_json_path):
     return {
         "ok": True,
         "date_key": date_key,
-        "updated_holes": [idx + 1 for idx in sorted(set(hole_indices))],
+        "updated_holes": [idx + 1 for idx in sorted(changed_hole_indices)],
+        "candidate_holes": [idx + 1 for idx in sorted(set(hole_indices))],
         "mapping_mode": mapping_mode,
+        "matched_players": matched_players,
+        "missing_players": missing_players,
     }
 
 def calculate_money_for_players(json_path: str, date_key: str):
