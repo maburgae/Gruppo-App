@@ -42,5 +42,35 @@
     ],
     "amount": 1155.0,
     "description": "Santa Clara GF"
+  },
+  {
+    "id": "afaab1ef-400f-4851-93f2-14d8e9cbc2c6",
+    "timestamp": "2026-10-09 08:17:15",
+    "payer": "Bernie",
+    "beneficiaries": [
+      "Andy",
+      "Bernie",
+      "Buffy",
+      "Jens",
+      "Marc",
+      "Markus"
+    ],
+    "amount": 140.0,
+    "description": "Padelplatz 2 Stunden"
+  },
+  {
+    "id": "9b91b404-0535-45c0-a53b-3d987c51a3c5",
+    "timestamp": "2026-10-09 08:19:04",
+    "payer": "Bernie",
+    "beneficiaries": [
+      "Andy",
+      "Bernie",
+      "Buffy",
+      "Jens",
+      "Marc",
+      "Markus"
+    ],
+    "amount": 5837.03,
+    "description": "Haus Marbella"
   }
 ]
