@@ -451,6 +451,19 @@ def render(st):
                     has_value = True
             return s if has_value else None
 
+        def _shots_received_on_hole(player_hcp, stroke_index):
+            if player_hcp is None or stroke_index is None or player_hcp <= 0:
+                return 0
+            base = player_hcp // 18
+            extra = 1 if stroke_index <= (player_hcp % 18) else 0
+            return base + extra
+
+        def _zero_point_stroke(par, player_hcp, stroke_index):
+            if par is None:
+                return None
+            shots = _shots_received_on_hole(player_hcp, stroke_index)
+            return par + shots + 2
+
         def _fixed_row(label, values):
             html.append("<tr>")
             html.append(f"<td class='left label'>{escape(label)}</td>")
@@ -490,6 +503,9 @@ def render(st):
                 continue
 
             day_hcp = pdata.get("DayHcp")
+            player_hcp = _safe_int(day_hcp)
+            if player_hcp is None:
+                player_hcp = _safe_int(pdata.get("Gesp.Hcp"))
             name_label = name if day_hcp in (None, "") else f"{name} ({day_hcp})"
 
             html.append("<tr>")
@@ -501,21 +517,31 @@ def render(st):
             for hole_idx in range(9):
                 sc = _safe_int(scores[hole_idx])
                 par = _safe_int(pars[hole_idx])
+                si = _safe_int(hcps[hole_idx])
                 bg = _score_bg(sc, par)
                 txt = "x" if scores[hole_idx] in (None, 0) else _fmt_cell(scores[hole_idx])
                 html.append(f"<td style='background:{bg};color:#111;font-weight:700'>{escape(txt)}</td>")
-                if sc is not None:
-                    front_sum += sc
+                if sc is not None and sc > 0:
+                    add_score = sc
+                else:
+                    add_score = _zero_point_stroke(par, player_hcp, si)
+                if add_score is not None:
+                    front_sum += add_score
                     front_has = True
             html.append(f"<td class='sum-col' style='font-weight:700'>{escape(_fmt_cell(front_sum if front_has else None))}</td>")
             for hole_idx in range(9, 18):
                 sc = _safe_int(scores[hole_idx])
                 par = _safe_int(pars[hole_idx])
+                si = _safe_int(hcps[hole_idx])
                 bg = _score_bg(sc, par)
                 txt = "x" if scores[hole_idx] in (None, 0) else _fmt_cell(scores[hole_idx])
                 html.append(f"<td style='background:{bg};color:#111;font-weight:700'>{escape(txt)}</td>")
-                if sc is not None:
-                    back_sum += sc
+                if sc is not None and sc > 0:
+                    add_score = sc
+                else:
+                    add_score = _zero_point_stroke(par, player_hcp, si)
+                if add_score is not None:
+                    back_sum += add_score
                     back_has = True
             gesp_hcp = _safe_int(pdata.get("Gesp.Hcp"))
             total_target = (gesp_hcp + course_par_total) if (gesp_hcp is not None and course_par_has) else None
