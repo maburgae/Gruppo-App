@@ -526,7 +526,10 @@ def render(st_obj):
         rd = allrounds.get(date_key, {}) or {}
         ort = rd.get("Ort", "")
         title = f"{date_key} ({ort})" if ort else date_key
-        st_obj.markdown(f"<b style='font-size:15px'>{escape(title)}</b>", unsafe_allow_html=True)
+        st_obj.markdown(
+            f"<span style='font-size:22px;font-weight:700;text-decoration:underline'>{escape(title)}</span>",
+            unsafe_allow_html=True,
+        )
 
         players = rd.get("Spieler", {}) or {}
         if players:

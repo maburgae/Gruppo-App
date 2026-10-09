@@ -815,7 +815,10 @@ def render(st):
     for d, obj in rounds_rev:
         ort = obj.get("Ort", "")
         display_name = f"{d} ({ort})" if ort else d
-        st.markdown(f"<b style='font-size:15px'>{display_name}</b>", unsafe_allow_html=True)
+        st.markdown(
+            f"<span style='font-size:22px;font-weight:700;text-decoration:underline'>{display_name}</span>",
+            unsafe_allow_html=True,
+        )
         players = obj.get("Spieler", {}) or {}
         if players:
             st.markdown(_render_ranking_html(players), unsafe_allow_html=True)
