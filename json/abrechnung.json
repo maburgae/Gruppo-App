@@ -87,20 +87,5 @@
     ],
     "amount": 882.0,
     "description": "Rio Real GF"
-  },
-  {
-    "id": "552b8344-dfb5-4a19-99d5-cc76c81f278c",
-    "timestamp": "2026-10-12 08:40:29",
-    "payer": "Andy",
-    "beneficiaries": [
-      "Andy",
-      "Bernie",
-      "Buffy",
-      "Jens",
-      "Marc",
-      "Markus"
-    ],
-    "amount": 1.0,
-    "description": "Test"
   }
 ]
