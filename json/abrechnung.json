@@ -100,5 +100,18 @@
     ],
     "amount": 898.96,
     "description": "Flüge hin"
+  },
+  {
+    "id": "ec3d0b1e-a5fc-4290-9ffe-3551e897f6e1",
+    "timestamp": "2026-10-14 04:32:42",
+    "payer": "Markus",
+    "beneficiaries": [
+      "Bernie",
+      "Jens",
+      "Marc",
+      "Markus"
+    ],
+    "amount": 1699.96,
+    "description": "Flüge zurück"
   }
 ]
