@@ -72,5 +72,124 @@
     ],
     "amount": 5837.03,
     "description": "Haus Marbella"
+  },
+  {
+    "id": "3b4b4204-95f2-4e00-b9df-4686c301e995",
+    "timestamp": "2026-10-11 08:01:57",
+    "payer": "Marc",
+    "beneficiaries": [
+      "Andy",
+      "Bernie",
+      "Buffy",
+      "Jens",
+      "Marc",
+      "Markus"
+    ],
+    "amount": 882.0,
+    "description": "Rio Real GF"
+  },
+  {
+    "id": "f0f26a2f-8956-4a72-ade7-114eb0aad45a",
+    "timestamp": "2026-10-14 04:32:15",
+    "payer": "Markus",
+    "beneficiaries": [
+      "Bernie",
+      "Jens",
+      "Marc",
+      "Markus"
+    ],
+    "amount": 898.96,
+    "description": "Flüge hin"
+  },
+  {
+    "id": "ec3d0b1e-a5fc-4290-9ffe-3551e897f6e1",
+    "timestamp": "2026-10-14 04:32:42",
+    "payer": "Markus",
+    "beneficiaries": [
+      "Bernie",
+      "Jens",
+      "Marc",
+      "Markus"
+    ],
+    "amount": 1699.96,
+    "description": "Flüge zurück"
+  },
+  {
+    "id": "4c471c7d-5f0c-4a22-898e-68d5377cfadf",
+    "timestamp": "2026-10-14 04:33:23",
+    "payer": "Markus",
+    "beneficiaries": [
+      "Andy"
+    ],
+    "amount": 334.99,
+    "description": "Flug Andy hin"
+  },
+  {
+    "id": "e90b6c04-5291-4301-a5aa-6b47ea151504",
+    "timestamp": "2026-10-14 04:33:38",
+    "payer": "Markus",
+    "beneficiaries": [
+      "Andy"
+    ],
+    "amount": 424.99,
+    "description": "Flug Andy zurück"
+  },
+  {
+    "id": "2bc4c895-5373-402a-b63e-2a4fe954a5e2",
+    "timestamp": "2026-10-14 04:34:10",
+    "payer": "Markus",
+    "beneficiaries": [
+      "Andy",
+      "Bernie",
+      "Buffy",
+      "Jens",
+      "Marc",
+      "Markus"
+    ],
+    "amount": 80.0,
+    "description": "Bälle"
+  },
+  {
+    "id": "1a736fbe-586e-44fd-bf00-27ffc61e682e",
+    "timestamp": "2026-10-14 10:48:02",
+    "payer": "Buffy",
+    "beneficiaries": [
+      "Bernie",
+      "Buffy",
+      "Jens",
+      "Marc",
+      "Markus"
+    ],
+    "amount": 115.0,
+    "description": "Alhaurin Essen"
+  },
+  {
+    "id": "d8f315a2-084a-42ea-a3dd-ba022f48ae0f",
+    "timestamp": "2026-10-14 17:17:21",
+    "payer": "Buffy",
+    "beneficiaries": [
+      "Bernie",
+      "Buffy",
+      "Jens",
+      "Marc",
+      "Markus"
+    ],
+    "amount": 75.0,
+    "description": "Fressi Alhaurin"
+  },
+  {
+    "id": "c37139bd-b488-46fb-9df2-247b22eef29a",
+    "timestamp": "2026-10-14 18:14:00",
+    "payer": "Jens",
+    "beneficiaries": [
+      "Andy",
+      "Bernie",
+      "Buffy",
+      "Jens",
+      "Marc",
+      "Markus"
+    ],
+    "amount": 165.67,
+    "description": "Aldi"
   }
 ]
