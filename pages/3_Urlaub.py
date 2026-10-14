@@ -281,7 +281,6 @@ def render(st):
 
     # Data source
     JSON_PATH = "json/allrounds.json"
-    CURRENT_ROUND_PATH = "json/golf_df/golf_df.json"
 
     # Player order consistent with stats page
     selected_players = ["Andy", "Marc", "Bernie", "Heiko", "Markus", "Buffy", "Jens"]
@@ -289,21 +288,7 @@ def render(st):
     # Helpers
     def load_allrounds():
         with open(JSON_PATH, "r", encoding="utf-8") as f:
-            base_data = json.load(f)
-
-        # Ergänze die aktuelle Runde aus golf_df für Live-Ansicht im Urlaub-Menü.
-        # So erscheinen neue Jahre/No-show-Geldwerte auch vor dem DB-Übernehmen.
-        try:
-            with open(CURRENT_ROUND_PATH, "r", encoding="utf-8") as f:
-                current_data = json.load(f)
-            if isinstance(current_data, dict):
-                for d, obj in current_data.items():
-                    if isinstance(obj, dict) and isinstance(obj.get("Spieler"), dict):
-                        base_data[d] = obj
-        except Exception:
-            pass
-
-        return base_data
+            return json.load(f)
 
     def get_year(date_str: str) -> int | None:
         try:
@@ -831,11 +816,11 @@ def render(st):
                 colors.append(color_map.get(p))
         if not any(colors):
             colors = None
-        fig, ax = plt.subplots(figsize=(6, 6))
+        fig, ax = plt.subplots(figsize=(7.2, 6.2))
         def fmt_euro(pct):
             abs_val = pct * sum(sizes) / 100.0
             return f"€{int(round(abs_val))}"
-        ax.pie(
+        wedges, _texts, _autotexts = ax.pie(
             sizes,
             labels=labels,
             colors=colors,
@@ -843,12 +828,21 @@ def render(st):
             startangle=90,
             counterclock=False,
             wedgeprops=dict(linewidth=1, edgecolor='white'),
-            textprops=dict(fontsize=18)  # doubled font size for labels and autopct
+            textprops=dict(fontsize=12)
+        )
+        legend_labels = [f"{name} (€{int(round(val))})" for name, val in zip(labels, sizes)]
+        ax.legend(
+            wedges,
+            legend_labels,
+            loc="center left",
+            bbox_to_anchor=(1.0, 0.5),
+            frameon=False,
+            fontsize=11,
         )
         # total in center
-        ax.text(0, 0, f"Gesamt\n€{int(round(total_geld))}", ha='center', va='center', fontsize=30, fontweight='bold')
+        ax.text(0, 0, f"Gesamt\n€{int(round(total_geld))}", ha='center', va='center', fontsize=20, fontweight='bold')
         ax.axis('equal')
-        fig.tight_layout()
+        fig.tight_layout(rect=[0, 0, 0.82, 1])
         st.pyplot(fig)
         plt.close(fig)
 
