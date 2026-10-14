@@ -176,5 +176,20 @@
     ],
     "amount": 75.0,
     "description": "Fressi Alhaurin"
+  },
+  {
+    "id": "c37139bd-b488-46fb-9df2-247b22eef29a",
+    "timestamp": "2026-10-14 18:14:00",
+    "payer": "Jens",
+    "beneficiaries": [
+      "Andy",
+      "Bernie",
+      "Buffy",
+      "Jens",
+      "Marc",
+      "Markus"
+    ],
+    "amount": 165.67,
+    "description": "Aldi"
   }
 ]
