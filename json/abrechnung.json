@@ -113,5 +113,15 @@
     ],
     "amount": 1699.96,
     "description": "Flüge zurück"
+  },
+  {
+    "id": "4c471c7d-5f0c-4a22-898e-68d5377cfadf",
+    "timestamp": "2026-10-14 04:33:23",
+    "payer": "Markus",
+    "beneficiaries": [
+      "Andy"
+    ],
+    "amount": 334.99,
+    "description": "Flug Andy hin"
   }
 ]
