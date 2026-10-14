@@ -148,5 +148,19 @@
     ],
     "amount": 80.0,
     "description": "Bälle"
+  },
+  {
+    "id": "1a736fbe-586e-44fd-bf00-27ffc61e682e",
+    "timestamp": "2026-10-14 10:48:02",
+    "payer": "Buffy",
+    "beneficiaries": [
+      "Bernie",
+      "Buffy",
+      "Jens",
+      "Marc",
+      "Markus"
+    ],
+    "amount": 115.0,
+    "description": "Alhaurin Essen"
   }
 ]
