@@ -83,6 +83,13 @@ def _pad18(lst: List[Any]) -> List[Any]:
     return lst[:18]
 
 
+def _has_numeric_score(pdata: Dict[str, Any]) -> bool:
+    scores = pdata.get("Score")
+    if not isinstance(scores, list):
+        return False
+    return any(isinstance(v, (int, float)) and v > 0 for v in scores)
+
+
 # ---------- Core ----------
 def apply_dayhcps_from_json(json_path: str, dayhcp_path: str) -> None:
     """
@@ -121,14 +128,19 @@ def update_round_for_date(json_path: str, date_key: str) -> None:
         pars: List[Optional[int]] = _pad18(round_obj.get("Par", [None] * 18))
         sindex: List[Optional[int]] = _pad18(round_obj.get("Hcp", [None] * 18))  # Stroke Index per hole
         players: Dict[str, Any] = round_obj.get("Spieler", {})
+        ranked_players: Dict[str, Any] = {
+            pname: pdata
+            for pname, pdata in players.items()
+            if isinstance(pdata, dict) and _has_numeric_score(pdata)
+        }
 
-        # 1) DayHcp wird nicht mehr berechnet, sondern vorausgesetzt
-        for pname, pdata in players.items():
+        # 1) DayHcp wird nicht mehr berechnet, sondern für gerankte Spieler vorausgesetzt
+        for pname, pdata in ranked_players.items():
             if "DayHcp" not in pdata or pdata["DayHcp"] == 0:
                 raise ValueError(f"DayHcp fehlt oder ist 0 für Spieler: {pname} am {actual_key}")
 
-        # 2) Stableford per hole & counters
-        for pname, pdata in players.items():
+        # 2) Stableford per hole & counters nur für gerankte Spieler
+        for pname, pdata in ranked_players.items():
             scores = _pad18(pdata.get("Score", []))
             day_hcp = pdata.get("DayHcp", 0)
             # Ensure NettoP array exists and is padded
@@ -195,7 +207,7 @@ def update_round_for_date(json_path: str, date_key: str) -> None:
                 tb.append(-val)  # größer ist besser -> negativ für absteigend
             return (-netto, *tb)
 
-        sorted_players = sorted(players.items(), key=player_sort_key)
+        sorted_players = sorted(ranked_players.items(), key=player_sort_key)
 
         # Dense Ranking zuweisen
         last_key = None
@@ -206,6 +218,18 @@ def update_round_for_date(json_path: str, date_key: str) -> None:
                 current_rank += 1
                 last_key = k
             pdata["Platz"] = current_rank
+
+        # Spieler ohne gültige Scores sind nicht in der Wertung.
+        for pname, pdata in players.items():
+            if pname in ranked_players or not isinstance(pdata, dict):
+                continue
+            pdata["Platz"] = None
+            for k in ("Netto", "Gesp.Hcp", "Birdies", "Pars", "Bogies", "Strich"):
+                pdata[k] = None
+            if not isinstance(pdata.get("NettoP"), list):
+                pdata["NettoP"] = [None] * 18
+            else:
+                pdata["NettoP"] = _pad18([None] * 18)
 
         # Save back
         with p.open("w", encoding="utf-8") as f:

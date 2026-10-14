@@ -40,6 +40,44 @@ def _has_numeric_score(pdata: dict) -> bool:
     return any(isinstance(v, (int, float)) for v in scores)
 
 
+def _to_int_money(value) -> int:
+    if isinstance(value, (int, float)):
+        return int(value)
+    if value in (None, ""):
+        return 0
+    try:
+        return int(float(str(value).replace(",", ".")))
+    except Exception:
+        return 0
+
+
+def _prepare_no_show_players_for_calculation(json_path: str, date_key: str) -> None:
+    """No-show players are excluded from ranking and kept as money-only records."""
+    no_show_players = _load_no_show_players()
+    if len(no_show_players) == 0:
+        return
+
+    with open(json_path, "r", encoding="utf-8") as f:
+        data = json.load(f)
+
+    if date_key not in data or "Spieler" not in data[date_key]:
+        return
+
+    players = data[date_key]["Spieler"]
+    changed = False
+    for pname in no_show_players:
+        if pname not in players:
+            continue
+        geld = _to_int_money(players[pname].get("Geld") if isinstance(players[pname], dict) else 0)
+        if players[pname] != {"Geld": geld}:
+            players[pname] = {"Geld": geld}
+            changed = True
+
+    if changed:
+        with open(json_path, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+
+
 def _append_no_show_players_with_daily_max(json_path: str, date_key: str) -> None:
     with open(json_path, "r", encoding="utf-8") as f:
         data = json.load(f)
@@ -100,6 +138,9 @@ def main() -> str:
     calc_dayhcps_for_players_before_date(date_key)
 
     apply_dayhcps_from_json(day_path, "json/DayHcp.json")
+
+    # No-show Spieler vor der Tagesberechnung aus der Wertung nehmen.
+    _prepare_no_show_players_for_calculation(day_path, date_key)
 
     # Runde für den Tag berechnen/aktualisieren
     update_round_for_date(day_path, date_key)

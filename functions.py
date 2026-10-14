@@ -519,12 +519,14 @@ def copy_scorecard_to_golf_df(source_json_path, target_json_path):
 def calculate_money_for_players(json_path: str, date_key: str):
     """
     Calculates money for each player in golf_df.json at the given date.
-    Money = Ladies * 10 + bonus for Platz:
-    - Last (highest Platz): 40
-    - Second last: 30
-    - Third last: 20
-    - Fourth last: 10
-    - Rest: 0
+    Money = Ladies * 10 + bonus for Platz.
+    The bonus is based on the Platz value (dense rank):
+    - highest Platz value (last place): 40
+    - second-highest Platz value: 30
+    - third-highest Platz value: 20
+    - fourth-highest Platz value: 10
+    - all other places: 0
+    Players sharing the same Platz receive the same bonus.
     Updates the 'Geld' field for each player and saves the file.
     """
     with open(json_path, "r", encoding="utf-8") as f:
@@ -533,24 +535,32 @@ def calculate_money_for_players(json_path: str, date_key: str):
         print(f"Date {date_key} not found or no players.")
         return
     players = data[date_key]["Spieler"]
-    platz_list = [(pname, pdata.get("Platz", None)) for pname, pdata in players.items() if isinstance(pdata.get("Platz", None), int)]
-    # Sort by Platz ascending (1 is best)
-    platz_sorted = sorted(platz_list, key=lambda x: x[1])
-    # Assign bonus
-    n = len(platz_sorted)
-    bonus_map = {}
-    if n >= 1:
-        bonus_map[platz_sorted[-1][0]] = 40
-    if n >= 2:
-        bonus_map[platz_sorted[-2][0]] = 30
-    if n >= 3:
-        bonus_map[platz_sorted[-3][0]] = 20
-    if n >= 4:
-        bonus_map[platz_sorted[-4][0]] = 10
+
+    def _has_real_score(pdata):
+        scores = pdata.get("Score") if isinstance(pdata, dict) else None
+        if not isinstance(scores, list):
+            return False
+        return any(isinstance(v, (int, float)) and v > 0 for v in scores)
+
+    platz_values = [
+        pdata.get("Platz")
+        for pdata in players.values()
+        if isinstance(pdata.get("Platz"), int) and _has_real_score(pdata)
+    ]
+
+    # Map unique Platz values (worst -> best among bottom 4) to bonuses.
+    unique_platz_desc = sorted(set(platz_values), reverse=True)
+    bonus_by_platz = {}
+    bonus_steps = [40, 30, 20, 10]
+    for idx, platz in enumerate(unique_platz_desc[:4]):
+        bonus_by_platz[platz] = bonus_steps[idx]
+
     # Calculate money
     for pname, pdata in players.items():
         ladies = pdata.get("Ladies", 0) or 0
-        bonus = bonus_map.get(pname, 0)
+        platz = pdata.get("Platz")
+        is_ranked_player = _has_real_score(pdata)
+        bonus = bonus_by_platz.get(platz, 0) if (is_ranked_player and isinstance(platz, int)) else 0
         pdata["Geld"] = int(ladies) * 10 + bonus
     with open(json_path, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)

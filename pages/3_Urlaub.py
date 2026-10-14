@@ -1,5 +1,6 @@
 def render(st):
     import json
+    import math
     import matplotlib.pyplot as plt
     from datetime import datetime
     from html import escape
@@ -280,6 +281,7 @@ def render(st):
 
     # Data source
     JSON_PATH = "json/allrounds.json"
+    CURRENT_ROUND_PATH = "json/golf_df/golf_df.json"
 
     # Player order consistent with stats page
     selected_players = ["Andy", "Marc", "Bernie", "Heiko", "Markus", "Buffy", "Jens"]
@@ -287,7 +289,21 @@ def render(st):
     # Helpers
     def load_allrounds():
         with open(JSON_PATH, "r", encoding="utf-8") as f:
-            return json.load(f)
+            base_data = json.load(f)
+
+        # Ergänze die aktuelle Runde aus golf_df für Live-Ansicht im Urlaub-Menü.
+        # So erscheinen neue Jahre/No-show-Geldwerte auch vor dem DB-Übernehmen.
+        try:
+            with open(CURRENT_ROUND_PATH, "r", encoding="utf-8") as f:
+                current_data = json.load(f)
+            if isinstance(current_data, dict):
+                for d, obj in current_data.items():
+                    if isinstance(obj, dict) and isinstance(obj.get("Spieler"), dict):
+                        base_data[d] = obj
+        except Exception:
+            pass
+
+        return base_data
 
     def get_year(date_str: str) -> int | None:
         try:
@@ -710,8 +726,6 @@ def render(st):
     )
 
     # 4) Sonderwertungen Übersicht (Jahr) – LD %, N2TP %, Ladies/R und Gesamt
-    import math
-
     def to_points(v) -> float:
         if v is None:
             return 0.0
@@ -724,6 +738,23 @@ def render(st):
         if isinstance(v, str):
             return 1.0 if v.strip() != "" else 0.0
         return 0.0
+
+    def _to_money_float(v):
+        if isinstance(v, bool):
+            return None
+        if isinstance(v, (int, float)):
+            if isinstance(v, float) and math.isnan(v):
+                return None
+            return float(v)
+        if isinstance(v, str):
+            s = v.strip().replace(",", ".")
+            if not s:
+                return None
+            try:
+                return float(s)
+            except Exception:
+                return None
+        return None
 
     ld_points = {p: 0.0 for p in year_players}
     n2tp_points = {p: 0.0 for p in year_players}
@@ -756,13 +787,27 @@ def render(st):
     display_table(["Spieler", "LD %", "N2TP %", "Ladies/R", "L Ges."], rows, "Sonderwertungen Übersicht (Jahr)")
 
     # 5) Monetenkuchen (Jahr): Geld-Verteilung im Jahr
-    geld_sums = {p: 0.0 for p in year_players}
+    # Eigene Spielerliste für Geldwerte (inkl. No-show/Geld-only Einträge)
+    money_players_set = set()
     for _, obj in rounds_for_year:
-        sp = obj.get("Spieler", {})
-        for p in year_players:
-            v = sp.get(p, {}).get("Geld")
-            if isinstance(v, (int, float)) and not (isinstance(v, float) and math.isnan(v)):
-                geld_sums[p] += float(v)
+        sp = obj.get("Spieler", {}) or {}
+        for p, pdata in sp.items():
+            if not isinstance(pdata, dict):
+                continue
+            money_val = _to_money_float(pdata.get("Geld"))
+            if money_val is not None:
+                money_players_set.add(p)
+
+    money_players = [p for p in selected_players if p in money_players_set]
+    money_players.extend(sorted(money_players_set - set(selected_players)))
+
+    geld_sums = {p: 0.0 for p in money_players}
+    for _, obj in rounds_for_year:
+        sp = obj.get("Spieler", {}) or {}
+        for p in money_players:
+            money_val = _to_money_float(sp.get(p, {}).get("Geld"))
+            if money_val is not None:
+                geld_sums[p] += money_val
 
     labels, sizes = [], []
     try:
@@ -778,7 +823,7 @@ def render(st):
     if total_geld <= 0:
         st.info("Keine Geld-Daten für dieses Jahr vorhanden.")
     else:
-        for p in year_players:
+        for p in money_players:
             val = geld_sums[p]
             if val > 0:
                 labels.append(p)
