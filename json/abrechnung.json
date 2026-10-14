@@ -162,5 +162,19 @@
     ],
     "amount": 115.0,
     "description": "Alhaurin Essen"
+  },
+  {
+    "id": "d8f315a2-084a-42ea-a3dd-ba022f48ae0f",
+    "timestamp": "2026-10-14 17:17:21",
+    "payer": "Buffy",
+    "beneficiaries": [
+      "Bernie",
+      "Buffy",
+      "Jens",
+      "Marc",
+      "Markus"
+    ],
+    "amount": 75.0,
+    "description": "Fressi Alhaurin"
   }
 ]
