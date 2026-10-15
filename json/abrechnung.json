@@ -219,5 +219,19 @@
     ],
     "amount": 125.0,
     "description": "Fressi Santa Maria"
+  },
+  {
+    "id": "9bc258a3-a68f-4ceb-8dcc-6ed6a20e77fd",
+    "timestamp": "2026-10-15 18:39:02",
+    "payer": "Jens",
+    "beneficiaries": [
+      "Bernie",
+      "Buffy",
+      "Jens",
+      "Marc",
+      "Markus"
+    ],
+    "amount": 330.0,
+    "description": "Fressi elLaurel"
   }
 ]
