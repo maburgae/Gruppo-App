@@ -21,44 +21,20 @@ UPLOAD_MODEL_OPTIONS = [
     "gpt-5.6-luna",
     "gpt-5-nano",
 ]
-NO_SHOW_JSON_PATH = "json/no_show_players.json"
 
 
-def _load_no_show_players() -> list[str]:
-    try:
-        with open(NO_SHOW_JSON_PATH, "r", encoding="utf-8") as f:
-            data = json.load(f)
-        if isinstance(data, dict):
-            players = data.get("players", [])
-        elif isinstance(data, list):
-            players = data
-        else:
-            players = []
-        out = []
-        for p in players:
-            if isinstance(p, str):
-                pn = p.strip()
-                if pn and pn not in out:
-                    out.append(pn)
-        return out
-    except Exception:
-        return []
+def _is_money_only_player_entry(pdata) -> bool:
+    return isinstance(pdata, dict) and set(pdata.keys()) == {"Geld"}
 
 
-def _save_no_show_players(players: list[str]) -> None:
-    cleaned = []
-    for p in players:
-        if isinstance(p, str):
-            pn = p.strip()
-            if pn and pn not in cleaned:
-                cleaned.append(pn)
-    os.makedirs("json", exist_ok=True)
-    with open(NO_SHOW_JSON_PATH, "w", encoding="utf-8") as f:
-        json.dump({"players": cleaned}, f, ensure_ascii=False, indent=2)
-
-
-def _clear_no_show_players() -> None:
-    _save_no_show_players([])
+def _load_no_show_players_from_round(players_obj: dict) -> list[str]:
+    out = []
+    for pname, pdata in (players_obj or {}).items():
+        if isinstance(pname, str) and _is_money_only_player_entry(pdata):
+            pn = pname.strip()
+            if pn and pn not in out:
+                out.append(pn)
+    return out
 
 def _init_state():
     import streamlit as st
@@ -764,7 +740,7 @@ def render(st):
     platzname = st.text_input("Platzname", key="konf_platzname", on_change=_mark_meta_dirty)
 
     # Datum bleibt editierbar (z.B. fuer manuelle Referenz)
-    st.date_input("Datum", key="konf_round_date")
+    st.date_input("Datum", key="konf_round_date", on_change=_mark_meta_dirty)
 
     # Feste Spielerauswahl mit Flight-Dropdown je Spieler
     st.markdown("**Spieler**")
@@ -788,6 +764,7 @@ def render(st):
 
     # No-show Markierung nur fuer Spieler, die nicht Teil der aktuellen Gruppe sind
     st.markdown("**No-show (nicht in der Gruppe)**")
+    no_show_from_round = set(_load_no_show_players_from_round(players_obj_for_ui))
     no_show_candidates = [p for p in ui_players if p not in selected_players]
     selected_no_shows = []
     if no_show_candidates:
@@ -795,19 +772,14 @@ def render(st):
         no_show_cols = st.columns(len(no_show_candidates), gap="small")
         for col, pname in zip(no_show_cols, no_show_candidates):
             no_show_key = f"konf_noshow_{pname}"
-            if no_show_key not in st.session_state:
-                st.session_state[no_show_key] = False
+            if should_prefill or no_show_key not in st.session_state:
+                st.session_state[no_show_key] = pname in no_show_from_round
             if col.checkbox(f"{pname} no-show fee", key=no_show_key, on_change=_mark_meta_dirty):
                 selected_no_shows.append(pname)
         st.markdown("</div>", unsafe_allow_html=True)
     else:
         st.caption("Alle bekannten Spieler sind in der Gruppe.")
-
-    # Checkbox-Auswahl in separater No-show Datei halten
-    saved_no_shows = sorted(set(_load_no_show_players()))
     selected_no_shows = sorted(set(selected_no_shows))
-    if saved_no_shows != selected_no_shows:
-        _save_no_show_players(selected_no_shows)
 
     # Kompatibel halten: JSON-String aus den gecheckten Spielern bauen
     st.session_state.konf_players = json.dumps(selected_players, ensure_ascii=False)
@@ -878,7 +850,12 @@ def render(st):
         except Exception:
             return 0
 
-    no_show_players = _load_no_show_players()
+    def _normalize_money_value(val):
+        if val in (None, ""):
+            return None
+        return _to_int_money(val)
+
+    no_show_players = list(selected_no_shows)
     no_show_set = set(no_show_players)
 
     current_par = _norm_list(data.get("Par", []))
@@ -887,6 +864,33 @@ def render(st):
 
     # Sofort-Sync: Platzname + Spieler/Fights direkt nach UI-Aenderungen speichern
     instant_meta_changed = False
+
+    desired_round_date = st.session_state.get("konf_round_date")
+    if isinstance(desired_round_date, datetime):
+        desired_round_date = desired_round_date.date()
+    if isinstance(desired_round_date, date):
+        desired_key = desired_round_date.strftime("%d.%m.%Y")
+        if desired_key != key:
+            golf_data[desired_key] = data
+            golf_data.pop(key, None)
+            key = desired_key
+            instant_meta_changed = True
+            st.session_state.konf_loaded_round_key = desired_key
+
+    # No-show Marker direkt in golf_df halten (reiner Geld-Eintrag).
+    for player in ui_players:
+        if player in selected_players:
+            continue
+        is_no_show = player in no_show_set
+        pdata = all_players_map.get(player)
+        if is_no_show:
+            if not _is_money_only_player_entry(pdata):
+                all_players_map[player] = {"Geld": None}
+                instant_meta_changed = True
+        else:
+            if _is_money_only_player_entry(pdata):
+                all_players_map.pop(player, None)
+                instant_meta_changed = True
 
     ort_input_now = st.session_state.get("konf_platzname", "")
     if isinstance(ort_input_now, str):
@@ -910,13 +914,16 @@ def render(st):
 
         pdata = all_players_map.get(player)
         if checked:
-            if not isinstance(pdata, dict):
+            if (not isinstance(pdata, dict)) or _is_money_only_player_entry(pdata):
                 all_players_map[player] = {
                     "Flight": flight_val,
                     "Score": [None] * 18,
                 }
                 instant_meta_changed = True
             else:
+                if not isinstance(pdata.get("Score"), list):
+                    pdata["Score"] = [None] * 18
+                    instant_meta_changed = True
                 if pdata.get("Flight") != flight_val:
                     pdata["Flight"] = flight_val
                     instant_meta_changed = True
@@ -935,8 +942,8 @@ def render(st):
         pdata = all_players_map.get(player)
         if not isinstance(pdata, dict) or _has_numeric_score(pdata):
             continue
-        money_val = _to_int_money(pdata.get("Geld"))
-        if list(pdata.keys()) != ["Geld"] or pdata.get("Geld") != money_val:
+        money_val = _normalize_money_value(pdata.get("Geld"))
+        if (not _is_money_only_player_entry(pdata)) or pdata.get("Geld") != money_val:
             all_players_map[player] = {"Geld": money_val}
             no_show_cleanup_changed = True
 
@@ -1084,7 +1091,7 @@ def render(st):
             if player in no_show_set and not _has_numeric_score(data["Spieler"].get(player, {})):
                 # no-show Einträge bleiben strikt bei Geld-only
                 pdata = data["Spieler"].get(player, {}) or {}
-                data["Spieler"][player] = {"Geld": _to_int_money(pdata.get("Geld"))}
+                data["Spieler"][player] = {"Geld": _normalize_money_value(pdata.get("Geld"))}
                 continue
             if player in new_scores:
                 data["Spieler"][player]["Score"] = new_scores[player]
@@ -1222,10 +1229,15 @@ def render(st):
             date_key = next(iter(_tag.keys()))
             round_obj = _tag.get(date_key, {}) or {}
             players_obj = round_obj.get("Spieler", {}) or {}
+            display_players = list(selected_players)
+            for p in no_show_players:
+                if p not in display_players:
+                    display_players.append(p)
+            display_players_obj = {p: players_obj[p] for p in display_players if p in players_obj}
             st.success("Tag berechnet. Ausgabe als HTML-Tabellen aktualisiert.")
             st.markdown(f"<b style='font-size:15px'>{escape(date_key)}</b>", unsafe_allow_html=True)
-            st.markdown(_render_ranking_html(players_obj), unsafe_allow_html=True)
-            st.markdown(_render_specials_line(players_obj), unsafe_allow_html=True)
+            st.markdown(_render_ranking_html(display_players_obj), unsafe_allow_html=True)
+            st.markdown(_render_specials_line(display_players_obj), unsafe_allow_html=True)
             st.markdown(_render_scorecard_html(round_obj), unsafe_allow_html=True)
         except Exception as e:
             st.error(f"Fehler bei der Tagesberechnung: {e}")

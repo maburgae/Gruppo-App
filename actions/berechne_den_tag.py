@@ -4,40 +4,29 @@ from DayHcp import calc_dayhcps_for_players_before_date
 from calc_the_day import update_round_for_date
 from functions import calculate_money_for_players
 import json
-import os
 
 
-NO_SHOW_JSON_PATH = "json/no_show_players.json"
+def _is_money_only_player_entry(pdata: dict) -> bool:
+    return isinstance(pdata, dict) and set(pdata.keys()) == {"Geld"}
 
 
-def _load_no_show_players() -> list[str]:
-    if not os.path.exists(NO_SHOW_JSON_PATH):
-        return []
-    try:
-        with open(NO_SHOW_JSON_PATH, "r", encoding="utf-8") as f:
-            data = json.load(f)
-        if isinstance(data, dict):
-            players = data.get("players", [])
-        elif isinstance(data, list):
-            players = data
-        else:
-            players = []
-        out = []
-        for p in players:
-            if isinstance(p, str):
-                pn = p.strip()
-                if pn and pn not in out:
-                    out.append(pn)
-        return out
-    except Exception:
-        return []
+def _extract_no_show_players(players: dict) -> list[str]:
+    out = []
+    for pname, pdata in (players or {}).items():
+        if not isinstance(pname, str):
+            continue
+        if _is_money_only_player_entry(pdata):
+            pn = pname.strip()
+            if pn and pn not in out:
+                out.append(pn)
+    return out
 
 
 def _has_numeric_score(pdata: dict) -> bool:
     scores = pdata.get("Score")
     if not isinstance(scores, list):
         return False
-    return any(isinstance(v, (int, float)) for v in scores)
+    return any(isinstance(v, (int, float)) and v > 0 for v in scores)
 
 
 def _to_int_money(value) -> int:
@@ -51,9 +40,14 @@ def _to_int_money(value) -> int:
         return 0
 
 
-def _prepare_no_show_players_for_calculation(json_path: str, date_key: str) -> None:
+def _normalize_money_value(value):
+    if value in (None, ""):
+        return None
+    return _to_int_money(value)
+
+
+def _prepare_no_show_players_for_calculation(json_path: str, date_key: str, no_show_players: list[str]) -> None:
     """No-show players are excluded from ranking and kept as money-only records."""
-    no_show_players = _load_no_show_players()
     if len(no_show_players) == 0:
         return
 
@@ -68,7 +62,8 @@ def _prepare_no_show_players_for_calculation(json_path: str, date_key: str) -> N
     for pname in no_show_players:
         if pname not in players:
             continue
-        geld = _to_int_money(players[pname].get("Geld") if isinstance(players[pname], dict) else 0)
+        old_money = players[pname].get("Geld") if isinstance(players[pname], dict) else None
+        geld = _normalize_money_value(old_money)
         if players[pname] != {"Geld": geld}:
             players[pname] = {"Geld": geld}
             changed = True
@@ -78,14 +73,13 @@ def _prepare_no_show_players_for_calculation(json_path: str, date_key: str) -> N
             json.dump(data, f, ensure_ascii=False, indent=2)
 
 
-def _append_no_show_players_with_daily_max(json_path: str, date_key: str) -> None:
+def _append_no_show_players_with_daily_max(json_path: str, date_key: str, no_show_players: list[str]) -> None:
     with open(json_path, "r", encoding="utf-8") as f:
         data = json.load(f)
 
     if date_key not in data or "Spieler" not in data[date_key]:
         return
 
-    no_show_players = _load_no_show_players()
     if len(no_show_players) == 0:
         return
 
@@ -135,12 +129,19 @@ def main() -> str:
         # In Notfällen nutze das heutige Datum
         date_key = date_key_today
 
+    no_show_players = []
+    try:
+        round_players = (day_data.get(date_key, {}) or {}).get("Spieler", {}) if isinstance(day_data, dict) else {}
+        no_show_players = _extract_no_show_players(round_players)
+    except Exception:
+        no_show_players = []
+
     calc_dayhcps_for_players_before_date(date_key)
 
     apply_dayhcps_from_json(day_path, "json/DayHcp.json")
 
     # No-show Spieler vor der Tagesberechnung aus der Wertung nehmen.
-    _prepare_no_show_players_for_calculation(day_path, date_key)
+    _prepare_no_show_players_for_calculation(day_path, date_key, no_show_players)
 
     # Runde für den Tag berechnen/aktualisieren
     update_round_for_date(day_path, date_key)
@@ -149,6 +150,6 @@ def main() -> str:
     calculate_money_for_players(day_path, date_key)
 
     # No-show Spieler mit Tages-Maximalbetrag nachträglich einfügen
-    _append_no_show_players_with_daily_max(day_path, date_key)
+    _append_no_show_players_with_daily_max(day_path, date_key, no_show_players)
 
     return "Tag erfolgreich berechnet."
