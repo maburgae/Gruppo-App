@@ -205,5 +205,19 @@
     ],
     "amount": 690.0,
     "description": "Santa Maria GF"
+  },
+  {
+    "id": "3c9eb16f-7f25-40ce-9a98-1caca622b529",
+    "timestamp": "2026-10-15 13:25:41",
+    "payer": "Jens",
+    "beneficiaries": [
+      "Bernie",
+      "Buffy",
+      "Jens",
+      "Marc",
+      "Markus"
+    ],
+    "amount": 125.0,
+    "description": "Fressi Santa Maria"
   }
 ]
