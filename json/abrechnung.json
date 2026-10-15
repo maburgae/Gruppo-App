@@ -191,5 +191,19 @@
     ],
     "amount": 165.67,
     "description": "Aldi"
+  },
+  {
+    "id": "91c8dc44-7f89-419a-a97b-b2607b2529ca",
+    "timestamp": "2026-10-15 07:20:09",
+    "payer": "Marc",
+    "beneficiaries": [
+      "Bernie",
+      "Buffy",
+      "Jens",
+      "Marc",
+      "Markus"
+    ],
+    "amount": 690.0,
+    "description": "Santa Maria GF"
   }
 ]
