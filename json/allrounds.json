@@ -40036,7 +40036,7 @@
           7
         ],
         "Ladies": 0,
-        "LD": 0,
+        "LD": 1,
         "N2TP": 0,
         "DayHcp": 46,
         "NettoP": [
@@ -40323,7 +40323,7 @@
           null,
           null
         ],
-        "Ladies": 2,
+        "Ladies": 4,
         "LD": 0,
         "N2TP": 0,
         "DayHcp": 67,
@@ -40354,7 +40354,7 @@
         "Strich": 9,
         "Gesp.Hcp": 85,
         "Platz": 5,
-        "Geld": 60
+        "Geld": 80
       },
       "Bernie": {
         "Flight": "1",
@@ -40379,8 +40379,8 @@
           7
         ],
         "Ladies": 0,
-        "LD": 1,
-        "N2TP": 0,
+        "LD": 0,
+        "N2TP": 1,
         "DayHcp": 44,
         "NettoP": [
           2,
@@ -40434,8 +40434,8 @@
           5
         ],
         "Ladies": 1,
-        "LD": 0,
-        "N2TP": 1,
+        "LD": 1,
+        "N2TP": 0,
         "DayHcp": 30,
         "NettoP": [
           2,
@@ -40522,7 +40522,7 @@
         "Geld": 10
       },
       "Andy": {
-        "Geld": 60
+        "Geld": 80
       }
     },
     "Hole": [
