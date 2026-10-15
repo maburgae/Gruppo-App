@@ -52,7 +52,7 @@
         "Bogies": 2,
         "Strich": 3,
         "DayHcp": 28,
-        "Ladies": 1,
+        "Ladies": 0,
         "N2TP": 0,
         "LD": 0,
         "Flight": "1",
@@ -119,7 +119,7 @@
           null,
           10
         ],
-        "Ladies": 2,
+        "Ladies": 0,
         "LD": 0,
         "N2TP": 0,
         "DayHcp": 67,
@@ -229,7 +229,7 @@
           5,
           6
         ],
-        "Ladies": 2,
+        "Ladies": 0,
         "LD": 0,
         "N2TP": 0,
         "DayHcp": 30,
@@ -286,7 +286,7 @@
         ],
         "Ladies": 0,
         "LD": 0,
-        "N2TP": 1,
+        "N2TP": 0,
         "DayHcp": 26,
         "NettoP": [
           1,
