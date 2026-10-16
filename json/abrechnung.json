@@ -233,5 +233,20 @@
     ],
     "amount": 330.0,
     "description": "Fressi elLaurel"
+  },
+  {
+    "id": "3d22207f-fcac-42ad-b60e-83dbd125e006",
+    "timestamp": "2026-10-16 10:40:34",
+    "payer": "Jens",
+    "beneficiaries": [
+      "Andy",
+      "Bernie",
+      "Buffy",
+      "Jens",
+      "Marc",
+      "Markus"
+    ],
+    "amount": 139.0,
+    "description": "Aldi"
   }
 ]
