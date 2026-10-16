@@ -248,5 +248,20 @@
     ],
     "amount": 139.0,
     "description": "Aldi"
+  },
+  {
+    "id": "f8f392cd-da73-47ea-bc27-53b5f7626651",
+    "timestamp": "2026-10-16 18:29:30",
+    "payer": "Marc",
+    "beneficiaries": [
+      "Andy",
+      "Bernie",
+      "Buffy",
+      "Jens",
+      "Marc",
+      "Markus"
+    ],
+    "amount": 180.0,
+    "description": "Buggies Rio Real"
   }
 ]
