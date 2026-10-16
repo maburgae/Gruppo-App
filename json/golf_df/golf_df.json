@@ -119,7 +119,7 @@
           null,
           null
         ],
-        "Ladies": 2,
+        "Ladies": 0,
         "LD": 0,
         "N2TP": 0,
         "DayHcp": 67,
@@ -175,7 +175,7 @@
           7
         ],
         "Ladies": 0,
-        "LD": 1,
+        "LD": 0,
         "N2TP": 0,
         "DayHcp": 44,
         "NettoP": [
@@ -229,9 +229,9 @@
           4,
           5
         ],
-        "Ladies": 1,
-        "LD": 0,
-        "N2TP": 1,
+        "Ladies": 0,
+        "LD": 1,
+        "N2TP": 0,
         "DayHcp": 30,
         "NettoP": [
           2,
@@ -286,7 +286,7 @@
         ],
         "Ladies": 0,
         "LD": 0,
-        "N2TP": 0,
+        "N2TP": 1,
         "DayHcp": 26,
         "NettoP": [
           2,
