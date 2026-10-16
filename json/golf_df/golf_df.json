@@ -1,6 +1,6 @@
 {
-  "15.10.2026": {
-    "Ort": "Santa Maria",
+  "16.10.2026": {
+    "Ort": "Rio Real",
     "Par": [
       4,
       5,
@@ -208,7 +208,7 @@
         "Geld": 0
       },
       "Buffy": {
-        "Flight": "2",
+        "Flight": "1",
         "Score": [
           5,
           5,
@@ -263,7 +263,7 @@
         "Geld": 40
       },
       "Markus": {
-        "Flight": "2",
+        "Flight": "1",
         "Score": [
           5,
           5,
@@ -318,7 +318,27 @@
         "Geld": 10
       },
       "Andy": {
-        "Geld": 60
+        "Flight": "2",
+        "Score": [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ]
       }
     },
     "Hole": [
