@@ -263,5 +263,20 @@
     ],
     "amount": 180.0,
     "description": "Buggies Rio Real"
+  },
+  {
+    "id": "1b289ff6-1968-4339-bbcf-29a8ff6ae4f5",
+    "timestamp": "2026-10-17 17:19:27",
+    "payer": "Jens",
+    "beneficiaries": [
+      "Andy",
+      "Bernie",
+      "Buffy",
+      "Jens",
+      "Marc",
+      "Markus"
+    ],
+    "amount": 115.0,
+    "description": "Fressi  Higueron"
   }
 ]
