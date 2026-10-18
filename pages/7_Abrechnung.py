@@ -191,13 +191,16 @@ def render(st):
 
     players = _load_players()
     expenses = _load_expenses()
+    saved_spende_player = _load_spende_player()
     donation_player = st.session_state.get("abrechnung_spende_player")
     if donation_player not in players:
-        donation_player = _load_spende_player()
+        donation_player = saved_spende_player
     if donation_player not in players and players:
         donation_player = players[0]
     if donation_player:
         st.session_state["abrechnung_spende_player"] = donation_player
+    if "abrechnung_spende_player_prev" not in st.session_state:
+        st.session_state["abrechnung_spende_player_prev"] = donation_player
 
     # ---------------- Allocation (Ausgaben) Table moved to top ----------------
     if expenses:
@@ -322,13 +325,15 @@ def render(st):
                 index=players.index(donation_player) if donation_player in players else 0,
                 key="abrechnung_spende_player",
             )
-            if selected_spende_player != donation_player:
+            prev_spende_player = st.session_state.get("abrechnung_spende_player_prev")
+            if selected_spende_player != prev_spende_player:
                 _save_spende_player(selected_spende_player)
                 ok_push, msg_push = _push_abrechnung_settings_to_github_api(st)
                 if ok_push:
                     st.success(msg_push)
                 else:
                     st.warning(msg_push)
+                st.session_state["abrechnung_spende_player_prev"] = selected_spende_player
     else:
         st.info("Noch keine Ausgaben vorhanden.")
 
