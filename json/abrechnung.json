@@ -308,5 +308,20 @@
     ],
     "amount": 70.0,
     "description": "Trinkgeld Haus"
+  },
+  {
+    "id": "9df84cc3-b052-4bb7-b416-237716c1b6db",
+    "timestamp": "2026-10-18 16:04:17",
+    "payer": "Bernie",
+    "beneficiaries": [
+      "Andy",
+      "Bernie",
+      "Buffy",
+      "Jens",
+      "Marc",
+      "Markus"
+    ],
+    "amount": 46.52,
+    "description": "Benzin"
   }
 ]
