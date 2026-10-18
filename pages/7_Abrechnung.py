@@ -7,6 +7,7 @@ import pandas as pd
 import uuid  # hinzugefügt für eindeutige IDs
 
 EXPENSE_FILE = "json/abrechnung.json"
+SETTINGS_FILE = "json/abrechnung_settings.json"
 
 DEFAULT_PLAYERS = ["Marc","Andy","Bernie","Jens","Markus","Buffy"]
 
@@ -99,6 +100,35 @@ def _save_expenses(expenses: list):
         json.dump(expenses, f, ensure_ascii=False, indent=2)
 
 
+def _load_settings():
+    if not os.path.exists(SETTINGS_FILE):
+        return {}
+    try:
+        with open(SETTINGS_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        return data if isinstance(data, dict) else {}
+    except Exception:
+        return {}
+
+
+def _save_settings(settings: dict):
+    os.makedirs(os.path.dirname(SETTINGS_FILE), exist_ok=True)
+    with open(SETTINGS_FILE, "w", encoding="utf-8") as f:
+        json.dump(settings, f, ensure_ascii=False, indent=2)
+
+
+def _load_spende_player():
+    settings = _load_settings()
+    val = settings.get("spende_player")
+    return val if isinstance(val, str) else None
+
+
+def _save_spende_player(player: str):
+    settings = _load_settings()
+    settings["spende_player"] = player
+    _save_settings(settings)
+
+
 def _safe_secrets(st):
     try:
         return st.secrets
@@ -106,24 +136,24 @@ def _safe_secrets(st):
         return {}
 
 
-def _push_abrechnung_to_github_api(st):
-    """Push only json/abrechnung.json via GitHub Contents API."""
+def _push_file_to_github_api(st, file_path: str, commit_prefix: str):
+    """Push one local JSON file via GitHub Contents API."""
     token = _safe_secrets(st).get("GITHUB_TOKEN")
     repo = _safe_secrets(st).get("REPO") or "USER/REPO"
     branch = _safe_secrets(st).get("BRANCH") or "main"
 
     if not token or repo == "USER/REPO":
         return False, "GitHub Secrets fehlen (GITHUB_TOKEN / REPO)."
-    if not os.path.exists(EXPENSE_FILE):
-        return False, f"Datei fehlt: {EXPENSE_FILE}"
+    if not os.path.exists(file_path):
+        return False, f"Datei fehlt: {file_path}"
 
     try:
-        with open(EXPENSE_FILE, "rb") as f:
+        with open(file_path, "rb") as f:
             local_bytes = f.read()
         local_b64 = base64.b64encode(local_bytes).decode()
 
         headers = {"Authorization": f"token {token}", "Accept": "application/vnd.github+json"}
-        api_url = f"https://api.github.com/repos/{repo}/contents/{EXPENSE_FILE}"
+        api_url = f"https://api.github.com/repos/{repo}/contents/{file_path}"
 
         sha = None
         r_get = requests.get(api_url, params={"ref": branch}, headers=headers)
@@ -132,17 +162,27 @@ def _push_abrechnung_to_github_api(st):
         elif r_get.status_code != 404:
             return False, f"GitHub GET Fehler {r_get.status_code}: {r_get.text[:160]}"
 
-        commit_msg = f"Update abrechnung.json {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}"
+        commit_msg = f"{commit_prefix} {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}"
         payload = {"message": commit_msg, "content": local_b64, "branch": branch}
         if sha:
             payload["sha"] = sha
 
         r_put = requests.put(api_url, headers=headers, json=payload)
         if r_put.status_code in (200, 201):
-            return True, "GitHub Push fuer abrechnung.json erfolgreich."
+            return True, f"GitHub Push fuer {file_path} erfolgreich."
         return False, f"GitHub PUT Fehler {r_put.status_code}: {r_put.text[:200]}"
     except Exception as e:
         return False, f"GitHub Push Ausnahme: {e}"
+
+
+def _push_abrechnung_to_github_api(st):
+    """Push json/abrechnung.json via GitHub Contents API."""
+    return _push_file_to_github_api(st, EXPENSE_FILE, "Update abrechnung.json")
+
+
+def _push_abrechnung_settings_to_github_api(st):
+    """Push json/abrechnung_settings.json via GitHub Contents API."""
+    return _push_file_to_github_api(st, SETTINGS_FILE, "Update abrechnung_settings.json")
 
 
 def render(st):
@@ -151,6 +191,13 @@ def render(st):
 
     players = _load_players()
     expenses = _load_expenses()
+    donation_player = st.session_state.get("abrechnung_spende_player")
+    if donation_player not in players:
+        donation_player = _load_spende_player()
+    if donation_player not in players and players:
+        donation_player = players[0]
+    if donation_player:
+        st.session_state["abrechnung_spende_player"] = donation_player
 
     # ---------------- Allocation (Ausgaben) Table moved to top ----------------
     if expenses:
@@ -216,6 +263,14 @@ def render(st):
             geld_row[p] = neg_val if abs(neg_val) > 1e-9 else 0.0
             totals[p] += geld_row[p]
         alloc_rows.append(geld_row)
+        monetenkuchen_total = sum(yearly_geld.values())
+        spende_row = {"Ausgabe": "Spende"}
+        for p in players:
+            spende_row[p] = 0.0
+        if donation_player in players:
+            spende_row[donation_player] = monetenkuchen_total
+            totals[donation_player] += monetenkuchen_total
+        alloc_rows.append(spende_row)
         total_row = {"Ausgabe": "Gesamt"}
         for p in players:
             total_row[p] = totals[p]
@@ -260,6 +315,20 @@ def render(st):
         </div>
         """
         st.markdown(table_html, unsafe_allow_html=True)
+        if players:
+            selected_spende_player = st.selectbox(
+                "Spende",
+                players,
+                index=players.index(donation_player) if donation_player in players else 0,
+                key="abrechnung_spende_player",
+            )
+            if selected_spende_player != donation_player:
+                _save_spende_player(selected_spende_player)
+                ok_push, msg_push = _push_abrechnung_settings_to_github_api(st)
+                if ok_push:
+                    st.success(msg_push)
+                else:
+                    st.warning(msg_push)
     else:
         st.info("Noch keine Ausgaben vorhanden.")
 
