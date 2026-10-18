@@ -278,5 +278,20 @@
     ],
     "amount": 115.0,
     "description": "Fressi  Higueron"
+  },
+  {
+    "id": "8fb4cda8-df10-4fbe-afc8-90108144c3b5",
+    "timestamp": "2026-10-18 15:39:11",
+    "payer": "Jens",
+    "beneficiaries": [
+      "Andy",
+      "Bernie",
+      "Buffy",
+      "Jens",
+      "Marc",
+      "Markus"
+    ],
+    "amount": 330.0,
+    "description": "Fressi Santa Clara"
   }
 ]
