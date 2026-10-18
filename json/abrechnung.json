@@ -293,5 +293,20 @@
     ],
     "amount": 330.0,
     "description": "Fressi Santa Clara"
+  },
+  {
+    "id": "2f0e46c3-b3eb-47e5-a6de-37afab86ed74",
+    "timestamp": "2026-10-18 15:39:32",
+    "payer": "Bernie",
+    "beneficiaries": [
+      "Andy",
+      "Bernie",
+      "Buffy",
+      "Jens",
+      "Marc",
+      "Markus"
+    ],
+    "amount": 70.0,
+    "description": "Trinkgeld Haus"
   }
 ]
