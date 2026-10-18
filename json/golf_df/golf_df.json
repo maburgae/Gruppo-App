@@ -117,9 +117,9 @@
           5,
           7,
           8,
-          4
+          null
         ],
-        "Ladies": 0,
+        "Ladies": 2,
         "LD": 0,
         "N2TP": 0,
         "DayHcp": 69,
@@ -174,7 +174,7 @@
           5,
           6
         ],
-        "Ladies": 0,
+        "Ladies": 1,
         "LD": 0,
         "N2TP": 0,
         "DayHcp": 45,
@@ -229,7 +229,7 @@
           5,
           5
         ],
-        "Ladies": 0,
+        "Ladies": 1,
         "LD": 0,
         "N2TP": 0,
         "DayHcp": 32,
