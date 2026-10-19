@@ -321,5 +321,16 @@
     ],
     "amount": 46.52,
     "description": "Benzin"
+  },
+  {
+    "id": "5dcaf9cd-7cee-4787-b0f0-7c9e4bbbee94",
+    "timestamp": "2026-10-19 04:48:43",
+    "payer": "Marc",
+    "beneficiaries": [
+      "Andy",
+      "Marc"
+    ],
+    "amount": 40.0,
+    "description": "Taxi"
   }
 ]
