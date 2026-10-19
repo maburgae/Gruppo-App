@@ -471,14 +471,27 @@ def render(st):
             return f"<span style='font-size:{FONT_SIZE_PX}px;'>{val}</span>"
         # Einheitliche Schriftgröße in gesamter Tabelle über table-level CSS
         header_html = ''.join([f"<th style='padding:4px;font-size:{FONT_SIZE_PX}px;'>{col}</th>" for col in display_df.columns])
+        summary_rows = {"Monetenkuchen", "Spende", "Auslage", "Kosten", "Saldo"}
         body_rows = []
         for _, row in display_df.iterrows():
+            row_name = str(row.get("Ausgabe", "")).strip()
+            is_summary = row_name in summary_rows
+            row_bg = "background:#f8fafc;" if is_summary else ""
+            border_top = "border-top:2px solid #94a3b8;" if is_summary else ""
+            if row_name == "Monetenkuchen":
+                border_top = "border-top:3px solid #64748b;"
             cells = []
             for col in display_df.columns:
                 if col == 'Ausgabe':
-                    cells.append(f"<td style='padding:4px;white-space:nowrap;font-size:{FONT_SIZE_PX}px;'>{row[col]}</td>")
+                    cells.append(
+                        f"<td style='padding:4px;white-space:nowrap;font-size:{FONT_SIZE_PX}px;"
+                        f"border-bottom:1px solid #e5e7eb;{row_bg}{border_top}'>{row[col]}</td>"
+                    )
                 else:
-                    cells.append(f"<td style='text-align:right;padding:4px;font-size:{FONT_SIZE_PX}px;'>{_cell_html(row[col])}</td>")
+                    cells.append(
+                        f"<td style='text-align:right;padding:4px;font-size:{FONT_SIZE_PX}px;"
+                        f"border-bottom:1px solid #e5e7eb;{row_bg}{border_top}'>{_cell_html(row[col])}</td>"
+                    )
             body_rows.append('<tr>' + ''.join(cells) + '</tr>')
         table_html = f"""
         <div style='overflow-x:auto;'>
@@ -514,10 +527,18 @@ def render(st):
         if transfers:
             selected_idx = None
             for idx, t in enumerate(transfers):
-                st.write(f"{t['von']} überweist {t['betrag']:.2f} EUR an {t['an']}")
-                btn_col, _spacer_col = st.columns([2, 18], gap="small")
-                if btn_col.button("QR-Code", key=f"ab_qr_btn_{idx}"):
-                    selected_idx = idx
+                try:
+                    with st.container(border=True):
+                        st.write(f"{t['von']} überweist {t['betrag']:.2f} EUR an {t['an']}")
+                        btn_col, _spacer_col = st.columns([2, 18], gap="small")
+                        if btn_col.button("QR-Code", key=f"ab_qr_btn_{idx}"):
+                            selected_idx = idx
+                except TypeError:
+                    st.write(f"{t['von']} überweist {t['betrag']:.2f} EUR an {t['an']}")
+                    btn_col, _spacer_col = st.columns([2, 18], gap="small")
+                    if btn_col.button("QR-Code", key=f"ab_qr_btn_{idx}"):
+                        selected_idx = idx
+                    st.markdown("---")
 
             if selected_idx is not None and 0 <= selected_idx < len(transfers):
                 t = transfers[selected_idx]
