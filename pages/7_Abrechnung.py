@@ -478,7 +478,7 @@ def render(st):
             is_summary = row_name in summary_rows
             row_bg = "background:#e2e8f0;" if is_summary else ""
             border_top = "border-top:2px solid #94a3b8;" if is_summary else ""
-            row_text = "color:#111827;"
+            row_text = "color:#111827;" if is_summary else "color:inherit;"
             row_weight = "font-weight:600;" if is_summary else ""
             if row_name == "Monetenkuchen":
                 border_top = "border-top:3px solid #64748b;"
