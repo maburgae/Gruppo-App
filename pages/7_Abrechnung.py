@@ -476,8 +476,10 @@ def render(st):
         for _, row in display_df.iterrows():
             row_name = str(row.get("Ausgabe", "")).strip()
             is_summary = row_name in summary_rows
-            row_bg = "background:#f8fafc;" if is_summary else ""
+            row_bg = "background:#e2e8f0;" if is_summary else ""
             border_top = "border-top:2px solid #94a3b8;" if is_summary else ""
+            row_text = "color:#111827;"
+            row_weight = "font-weight:600;" if is_summary else ""
             if row_name == "Monetenkuchen":
                 border_top = "border-top:3px solid #64748b;"
             cells = []
@@ -485,12 +487,12 @@ def render(st):
                 if col == 'Ausgabe':
                     cells.append(
                         f"<td style='padding:4px;white-space:nowrap;font-size:{FONT_SIZE_PX}px;"
-                        f"border-bottom:1px solid #e5e7eb;{row_bg}{border_top}'>{row[col]}</td>"
+                        f"border-bottom:1px solid #e5e7eb;{row_bg}{border_top}{row_text}{row_weight}'>{row[col]}</td>"
                     )
                 else:
                     cells.append(
                         f"<td style='text-align:right;padding:4px;font-size:{FONT_SIZE_PX}px;"
-                        f"border-bottom:1px solid #e5e7eb;{row_bg}{border_top}'>{_cell_html(row[col])}</td>"
+                        f"border-bottom:1px solid #e5e7eb;{row_bg}{border_top}{row_text}{row_weight}'>{_cell_html(row[col])}</td>"
                     )
             body_rows.append('<tr>' + ''.join(cells) + '</tr>')
         table_html = f"""
@@ -529,12 +531,28 @@ def render(st):
             for idx, t in enumerate(transfers):
                 try:
                     with st.container(border=True):
-                        st.write(f"{t['von']} überweist {t['betrag']:.2f} EUR an {t['an']}")
+                        st.markdown(
+                            (
+                                "<p style='color:#b91c1c;margin:0;'>"
+                                f"<strong><u>{t['von']}</u></strong> überweist {t['betrag']:.2f} EUR an "
+                                f"<strong><u>{t['an']}</u></strong>"
+                                "</p>"
+                            ),
+                            unsafe_allow_html=True,
+                        )
                         btn_col, _spacer_col = st.columns([2, 18], gap="small")
                         if btn_col.button("QR-Code", key=f"ab_qr_btn_{idx}"):
                             selected_idx = idx
                 except TypeError:
-                    st.write(f"{t['von']} überweist {t['betrag']:.2f} EUR an {t['an']}")
+                    st.markdown(
+                        (
+                            "<p style='color:#b91c1c;margin:0;'>"
+                            f"<strong><u>{t['von']}</u></strong> überweist {t['betrag']:.2f} EUR an "
+                            f"<strong><u>{t['an']}</u></strong>"
+                            "</p>"
+                        ),
+                        unsafe_allow_html=True,
+                    )
                     btn_col, _spacer_col = st.columns([2, 18], gap="small")
                     if btn_col.button("QR-Code", key=f"ab_qr_btn_{idx}"):
                         selected_idx = idx
