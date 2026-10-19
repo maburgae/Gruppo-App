@@ -470,7 +470,12 @@ def render(st):
                 return f"<span style='color:red;font-size:{FONT_SIZE_PX}px;'>{val}</span>"
             return f"<span style='font-size:{FONT_SIZE_PX}px;'>{val}</span>"
         # Einheitliche Schriftgröße in gesamter Tabelle über table-level CSS
-        header_html = ''.join([f"<th style='padding:4px;font-size:{FONT_SIZE_PX}px;'>{col}</th>" for col in display_df.columns])
+        header_cells = []
+        for col in display_df.columns:
+            header_cells.append(
+                f"<th style='padding:4px;font-size:{FONT_SIZE_PX}px;text-align:center;white-space:nowrap;'>{col}</th>"
+            )
+        header_html = ''.join(header_cells)
         summary_rows = {"Monetenkuchen", "Spende", "Auslage", "Kosten", "Saldo"}
         body_rows = []
         for _, row in display_df.iterrows():
@@ -485,19 +490,17 @@ def render(st):
             cells = []
             for col in display_df.columns:
                 if col == 'Ausgabe':
-                    cells.append(
-                        f"<td style='padding:4px;white-space:nowrap;font-size:{FONT_SIZE_PX}px;"
-                        f"border-bottom:1px solid #e5e7eb;{row_bg}{border_top}{row_text}{row_weight}'>{row[col]}</td>"
-                    )
+                    val_html = row[col]
                 else:
-                    cells.append(
-                        f"<td style='text-align:right;padding:4px;font-size:{FONT_SIZE_PX}px;"
-                        f"border-bottom:1px solid #e5e7eb;{row_bg}{border_top}{row_text}{row_weight}'>{_cell_html(row[col])}</td>"
-                    )
+                    val_html = _cell_html(row[col])
+                cells.append(
+                    f"<td style='text-align:center;white-space:nowrap;padding:4px;font-size:{FONT_SIZE_PX}px;"
+                    f"border-bottom:1px solid #e5e7eb;{row_bg}{border_top}{row_text}{row_weight}'>{val_html}</td>"
+                )
             body_rows.append('<tr>' + ''.join(cells) + '</tr>')
         table_html = f"""
         <div style='overflow-x:auto;'>
-        <table style='border-collapse:collapse;width:100%;font-size:{FONT_SIZE_PX}px;'>
+        <table style='border-collapse:collapse;display:inline-table;width:auto;table-layout:auto;font-size:{FONT_SIZE_PX}px;'>
             <thead><tr>{header_html}</tr></thead>
             <tbody>
                 {''.join(body_rows)}
