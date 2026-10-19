@@ -673,12 +673,16 @@ def render(st):
 
     # 2) Durchschnittswerte pro Runde (inkl. Avg Gesp.Hcp) – nur Jahr
     player_hcps = {p: [] for p in year_players}
+    player_plaetze = {p: [] for p in year_players}
     for _, obj in rounds_for_year:
         sp = obj.get("Spieler", {})
         for p in year_players:
             h = sp.get(p, {}).get("Gesp.Hcp")
             if isinstance(h, int):
                 player_hcps[p].append(h)
+            platz = sp.get(p, {}).get("Platz")
+            if isinstance(platz, int):
+                player_plaetze[p].append(platz)
 
     def yearly_avgs_for(stat_key: str) -> dict:
         counts = {p: 0 for p in year_players}
@@ -702,10 +706,12 @@ def render(st):
     rows = []
     for p in year_players:
         vals = player_hcps[p]
+        platz_vals = player_plaetze[p]
         avg_hcp = f"{(sum(vals) / len(vals)):.2f}" if vals else "No data"
-        rows.append([p, avg_hcp, f"{bird[p]:.2f}", f"{pars[p]:.2f}", f"{bog[p]:.2f}", f"{stri[p]:.2f}"])
+        avg_platz = f"{(sum(platz_vals) / len(platz_vals)):.2f}" if platz_vals else "No data"
+        rows.append([p, avg_platz, avg_hcp, f"{bird[p]:.2f}", f"{pars[p]:.2f}", f"{bog[p]:.2f}", f"{stri[p]:.2f}"])
     display_table(
-        ["Spieler", "Avg Gesp.Hcp", "Birdies/R", "Pars/R", "Bogies/R", "Strich/R"],
+        ["Spieler", "Ø Platz", "Avg Gesp.Hcp", "Birdies/R", "Pars/R", "Bogies/R", "Strich/R"],
         rows,
         "Durchschnittswerte pro Runde (Jahr)",
     )

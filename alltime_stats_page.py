@@ -253,25 +253,32 @@ def render(st):
 
     # --- 1+2. Combined Gesp.Hcp Table ---
     player_hcps = defaultdict(list)
+    player_plaetze = defaultdict(list)
     for round_obj in data.values():
         spieler = round_obj.get("Spieler", {})
         for name, pdata in spieler.items():
             hcp = pdata.get("Gesp.Hcp")
             if isinstance(hcp, int):
                 player_hcps[name].append(hcp)
+            platz = pdata.get("Platz")
+            if isinstance(platz, int):
+                player_plaetze[name].append(platz)
     combined_hcp_rows = []
     for name in selected_players:
         hcps = player_hcps.get(name, [])
+        plaetze = player_plaetze.get(name, [])
         avg = sum(hcps) / len(hcps) if hcps else None
+        avg_platz = sum(plaetze) / len(plaetze) if plaetze else None
         min_hcp = min(hcps) if hcps else "No data"
         max_hcp = max(hcps) if hcps else "No data"
         combined_hcp_rows.append([
             name,
+            f"{avg_platz:.2f}" if avg_platz is not None else "No data",
             f"{avg:.2f}" if avg is not None else "No data",
             min_hcp,
             max_hcp
         ])
-    display_table(["Spieler", "Avg Gesp.Hcp", "Min Gesp.Hcp", "Max Gesp.Hcp"], combined_hcp_rows, "Gesp.Hcp Übersicht")
+    display_table(["Spieler", "Ø Platz", "Avg Gesp.Hcp", "Min Gesp.Hcp", "Max Gesp.Hcp"], combined_hcp_rows, "Gesp.Hcp Übersicht")
 
     # --- 4. Platz counts table ---
     platz_counts = defaultdict(lambda: defaultdict(int))
