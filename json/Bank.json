@@ -1,0 +1,15 @@
+{
+  "Bernie": {
+    "IBAN": "DE60600202904340307254",
+    "Name": "Bernhard Gullasch"
+  },
+  "Marc": {
+    "IBAN": "DE37600501010007292141",
+    "Name": "Dipl.Ing. Marc Burgäzi"
+  },
+  "Markus": {
+    "IBAN": "DE51600501010005947663",
+    "Name": "Markus Krauter"
+  }
+
+}

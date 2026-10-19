@@ -1,6 +1,8 @@
 import json
 import os
 import base64
+import io
+import sys
 import requests
 from datetime import datetime
 import pandas as pd
@@ -185,6 +187,160 @@ def _push_abrechnung_settings_to_github_api(st):
     return _push_file_to_github_api(st, SETTINGS_FILE, "Update abrechnung_settings.json")
 
 
+def _load_bank_details():
+    bank_file = "json/Bank.json"
+    if not os.path.exists(bank_file):
+        return {}
+    try:
+        with open(bank_file, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        return data if isinstance(data, dict) else {}
+    except Exception:
+        return {}
+
+
+def _normalize_iban(iban: str):
+    if not isinstance(iban, str):
+        return ""
+    return "".join(ch for ch in iban.upper() if ch.isalnum())
+
+
+def _epc_text(value: str, max_len: int):
+    # EPC character set mapping/sanitizing.
+    text = str(value or "")
+    repl = {
+        "Ä": "AE", "Ö": "OE", "Ü": "UE", "ß": "SS",
+        "ä": "ae", "ö": "oe", "ü": "ue",
+    }
+    for src, dst in repl.items():
+        text = text.replace(src, dst)
+    allowed = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789/*-?:().,'+ "
+    cleaned = "".join(ch for ch in text if ch in allowed)
+    return cleaned[:max_len]
+
+
+def _build_epc_payload(recipient_name: str, iban: str, amount: float, remittance: str, bic: str = "", purpose: str = ""):
+    # EPC069-12 (SCT) payload, line based.
+    norm_iban = _normalize_iban(iban)
+    if len(norm_iban) < 15 or len(norm_iban) > 34 or not norm_iban.isalnum():
+        raise ValueError("Ungültige IBAN für EPC QR.")
+
+    amount_val = round(float(amount), 2)
+    if amount_val <= 0:
+        raise ValueError("Betrag muss größer als 0 sein.")
+
+    bic_norm = _epc_text((bic or "").upper(), 11)
+    if bic_norm and len(bic_norm) not in (8, 11):
+        raise ValueError("Ungültiger BIC (8 oder 11 Zeichen).")
+
+    name_norm = _epc_text(recipient_name, 70)
+    if not name_norm:
+        raise ValueError("Empfängername fehlt für EPC QR.")
+
+    purpose_norm = _epc_text(purpose, 4)
+    remittance_norm = _epc_text(remittance, 140)
+
+    lines = [
+        "BCD",                 # Service Tag
+        "002",                 # Version
+        "1",                   # Character set: UTF-8
+        "SCT",                 # SEPA Credit Transfer
+        bic_norm,               # BIC (optional)
+        name_norm,              # Name
+        norm_iban,              # IBAN
+        f"EUR{amount_val:.2f}",
+        purpose_norm,           # Purpose code (optional)
+        remittance_norm,        # Unstructured remittance
+        "",                    # Structured remittance (optional)
+        "",                    # Information (optional)
+    ]
+    payload = "\n".join(lines)
+    return payload, {
+        "name": name_norm,
+        "iban": norm_iban,
+        "bic": bic_norm,
+        "amount": amount_val,
+        "purpose": purpose_norm,
+        "betreff": remittance_norm,
+    }
+
+
+def _build_qr_png_bytes(payload: str):
+    try:
+        import importlib
+        qrcode = importlib.import_module("qrcode")
+    except ModuleNotFoundError as e:
+        raise RuntimeError(
+            f"QR-Code Paket fehlt im aktiven Interpreter ({sys.executable}). Bitte dort 'qrcode[pil]' installieren."
+        ) from e
+    except Exception as e:
+        raise RuntimeError(
+            f"QR-Code Importfehler im Interpreter {sys.executable}: {e}"
+        ) from e
+
+    try:
+        qr = qrcode.QRCode(
+            version=None,
+            error_correction=qrcode.constants.ERROR_CORRECT_M,
+            box_size=8,
+            border=2,
+        )
+        qr.add_data(payload)
+        qr.make(fit=True)
+        img = qr.make_image(fill_color="black", back_color="white")
+        buf = io.BytesIO()
+        img.save(buf, format="PNG")
+        return buf.getvalue()
+    except Exception as e:
+        raise RuntimeError(
+            "QR-Code konnte nicht erzeugt werden. Bitte qrcode[pil] im aktiven Interpreter installieren. "
+            f"Interpreter: {sys.executable}. Fehler: {e}"
+        ) from e
+
+
+def _build_settlement_transfers(saldos: dict):
+    """Erzeuge Ueberweisungen: groesstes Minus zahlt an groesstes Plus, dann weiter."""
+    debtors = []
+    creditors = []
+
+    # In Cent rechnen, damit Rundungsfehler bei Floats keine Restbetraege erzeugen.
+    for player, balance in saldos.items():
+        cents = int(round(float(balance) * 100))
+        if cents < 0:
+            debtors.append([player, -cents])
+        elif cents > 0:
+            creditors.append([player, cents])
+
+    # Groesstes Minus zuerst, groesstes Plus zuerst.
+    debtors.sort(key=lambda x: x[1], reverse=True)
+    creditors.sort(key=lambda x: x[1], reverse=True)
+
+    transfers = []
+    i = 0
+    j = 0
+    while i < len(debtors) and j < len(creditors):
+        debtor_name, debtor_open = debtors[i]
+        creditor_name, creditor_open = creditors[j]
+        pay = min(debtor_open, creditor_open)
+
+        if pay > 0:
+            transfers.append({
+                "von": debtor_name,
+                "an": creditor_name,
+                "betrag": pay / 100.0,
+            })
+
+        debtors[i][1] -= pay
+        creditors[j][1] -= pay
+
+        if debtors[i][1] == 0:
+            i += 1
+        if creditors[j][1] == 0:
+            j += 1
+
+    return transfers
+
+
 def render(st):
     st.markdown(STYLE_CSS, unsafe_allow_html=True)
     st.markdown("### Abrechnung")
@@ -206,7 +362,8 @@ def render(st):
     if expenses:
         st.markdown("**Ausgaben**")
         alloc_rows = []
-        totals = {p: 0.0 for p in players}
+        outlay_totals = {p: 0.0 for p in players}
+        umlage_totals = {p: 0.0 for p in players}
         for e in expenses:
             amt = e.get("amount", 0.0) or 0.0
             try:
@@ -218,6 +375,10 @@ def render(st):
             n_bens = len(bens) if len(bens) > 0 else 1
             share = amt / n_bens
             payer_name = e.get("payer", "")
+            if payer_name in outlay_totals:
+                outlay_totals[payer_name] += amt
+            for b in bens:
+                umlage_totals[b] += share
             row_label = f"{payer_name} {":"} {e.get('description','').strip()} ({amt:.2f})".strip()
             row_dict = {"Ausgabe": row_label}
             for p in players:
@@ -229,7 +390,6 @@ def render(st):
                         val = amt
                 elif p in bens:
                     val = -share
-                totals[p] += val
                 row_dict[p] = val
             alloc_rows.append(row_dict)
         from datetime import datetime as _dt
@@ -264,20 +424,33 @@ def render(st):
         for p in players:
             neg_val = -yearly_geld[p]
             geld_row[p] = neg_val if abs(neg_val) > 1e-9 else 0.0
-            totals[p] += geld_row[p]
+            umlage_totals[p] += yearly_geld[p]
         alloc_rows.append(geld_row)
         monetenkuchen_total = sum(yearly_geld.values())
         spende_row = {"Ausgabe": "Spende"}
+        spende_totals = {p: 0.0 for p in players}
         for p in players:
             spende_row[p] = 0.0
         if donation_player in players:
             spende_row[donation_player] = monetenkuchen_total
-            totals[donation_player] += monetenkuchen_total
+            spende_totals[donation_player] = monetenkuchen_total
         alloc_rows.append(spende_row)
-        total_row = {"Ausgabe": "Gesamt"}
+
+        outlay_row = {"Ausgabe": "Auslage"}
         for p in players:
-            total_row[p] = totals[p]
+            outlay_row[p] = outlay_totals[p]
+        alloc_rows.append(outlay_row)
+
+        kosten_row = {"Ausgabe": "Kosten"}
+        for p in players:
+            kosten_row[p] = -umlage_totals[p]
+        alloc_rows.append(kosten_row)
+
+        total_row = {"Ausgabe": "Saldo"}
+        for p in players:
+            total_row[p] = kosten_row[p] + outlay_totals[p] + spende_totals[p]
         alloc_rows.append(total_row)
+        saldo_totals = {p: total_row[p] for p in players}
         import pandas as _pd
         alloc_df = _pd.DataFrame(alloc_rows)
         display_df = alloc_df.copy()
@@ -320,7 +493,7 @@ def render(st):
         st.markdown(table_html, unsafe_allow_html=True)
         if players:
             selected_spende_player = st.selectbox(
-                "Spende",
+                "Wer spendet?",
                 players,
                 index=players.index(donation_player) if donation_player in players else 0,
                 key="abrechnung_spende_player",
@@ -334,6 +507,67 @@ def render(st):
                 else:
                     st.warning(msg_push)
                 st.session_state["abrechnung_spende_player_prev"] = selected_spende_player
+
+        st.markdown("**Konten ausgleichen**")
+        transfers = _build_settlement_transfers(saldo_totals)
+        bank_details = _load_bank_details()
+        if transfers:
+            selected_idx = None
+            for idx, t in enumerate(transfers):
+                st.write(f"{t['von']} überweist {t['betrag']:.2f} EUR an {t['an']}")
+                btn_col, _spacer_col = st.columns([2, 18], gap="small")
+                if btn_col.button("QR-Code", key=f"ab_qr_btn_{idx}"):
+                    selected_idx = idx
+
+            if selected_idx is not None and 0 <= selected_idx < len(transfers):
+                t = transfers[selected_idx]
+                rec_key = t["an"]
+                rec_bank = bank_details.get(rec_key, {}) if isinstance(bank_details, dict) else {}
+                rec_iban = rec_bank.get("IBAN", "")
+                rec_name = rec_bank.get("Name", rec_key)
+                rec_bic = rec_bank.get("BIC", "")
+
+                err_msg = None
+                qr_png = None
+                epc_meta = {}
+                try:
+                    epc_payload, epc_meta = _build_epc_payload(
+                        recipient_name=rec_name,
+                        iban=rec_iban,
+                        amount=t["betrag"],
+                        remittance="Grupporeise",
+                        bic=rec_bic,
+                        purpose="",
+                    )
+                    qr_png = _build_qr_png_bytes(epc_payload)
+                except Exception as e:
+                    err_msg = str(e)
+
+                def _render_qr_popup_content():
+                    st.markdown("### EPC QR Überweisung")
+                    st.write(f"Von: {t['von']}")
+                    st.write(f"An: {t['an']}")
+                    if err_msg:
+                        st.error(err_msg)
+                        if not rec_bank:
+                            st.info("In json/Bank.json fehlen die Bankdaten für den Empfänger.")
+                    else:
+                        st.image(qr_png, caption="SEPA EPC QR")
+                        st.write(f"Betrag: EUR {epc_meta['amount']:.2f}")
+                        st.write(f"Betreff: {epc_meta['betreff']}")
+                        st.write(f"Empfänger: {epc_meta['name']}")
+                        st.write(f"IBAN: {epc_meta['iban']}")
+
+                if hasattr(st, "dialog"):
+                    @st.dialog("Überweisung QR")
+                    def _show_qr_dialog():
+                        _render_qr_popup_content()
+                    _show_qr_dialog()
+                else:
+                    with st.expander("Überweisung QR", expanded=True):
+                        _render_qr_popup_content()
+        else:
+            st.info("Alle Konten sind bereits ausgeglichen.")
     else:
         st.info("Noch keine Ausgaben vorhanden.")
 
